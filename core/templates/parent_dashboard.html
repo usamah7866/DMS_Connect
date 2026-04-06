@@ -1,0 +1,14 @@
+<h2>Parent Dashboard</h2>
+
+<h3>Homework</h3>
+
+{% for hw in homework %}
+    <div style="border:1px solid black; margin:10px; padding:10px;">
+        <p><b>Class:</b> {{ hw.class_name }}</p>
+        <p><b>Subject:</b> {{ hw.subject }}</p>
+        <p><b>Description:</b> {{ hw.description }}</p>
+        <p><b>Date:</b> {{ hw.date }}</p>
+    </div>
+{% empty %}
+    <p>No homework available</p>
+{% endfor %}

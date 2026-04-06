@@ -1,0 +1,12 @@
+<h2>Teacher Dashboard</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    
+    <input type="text" name="class_name" placeholder="Class"><br><br>
+    <input type="text" name="subject" placeholder="Subject"><br><br>
+    
+    <textarea name="description" placeholder="Homework"></textarea><br><br>
+    
+    <button type="submit">Add Homework</button>
+</form>

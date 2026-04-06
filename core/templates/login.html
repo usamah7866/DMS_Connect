@@ -1,0 +1,162 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DMS Connect - Login</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+        }
+
+        .left {
+            width: 50%;
+            background: linear-gradient(135deg, #1e3c72, #e52d27);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .left img {
+            width: 120px;
+            margin-bottom: 15px;
+        }
+
+        .brand {
+            font-size: 18px;
+            letter-spacing: 2px;
+            opacity: 0.8;
+        }
+
+        .left h1 {
+            font-size: 34px;
+            margin: 10px 0;
+        }
+
+        .welcome {
+            margin-top: 10px;
+            font-size: 18px;
+        }
+
+        .tagline {
+            font-style: italic;
+            margin-top: 5px;
+        }
+
+        /* RIGHT SIDE */
+        .right {
+            width: 50%;
+            background: #f4f7fb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            width: 350px;
+            box-shadow: 0px 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #1e3c72;
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: gray;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .captcha {
+            margin: 15px 0;
+        }
+
+    </style>
+
+    <!-- Google reCAPTCHA -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+
+<body>
+
+<!-- LEFT -->
+<div class="left">
+    <img src="{% static 'core/images/logo.png' %}" alt="Logo">
+
+    <div class="brand">DMS CONNECT</div>
+
+    <h1>Decent Model School</h1>
+
+    <div class="welcome">Welcome to DMS Academic Portal</div>
+
+    <div class="tagline">"Seek The Light"</div>
+</div>
+
+<!-- RIGHT -->
+<div class="right">
+    <div class="login-box">
+        <h2>Login</h2>
+        <div class="subtitle">Enter your credentials</div>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="input-group">
+                <input type="text" name="username" placeholder="Username">
+            </div>
+
+            <div class="input-group">
+                <input type="password" name="password" placeholder="Password">
+            </div>
+
+            <!-- CAPTCHA -->
+            <div class="captcha">
+                <div class="g-recaptcha" data-sitekey="6LenYZ4sAAAAABE-ZwK68pRHYnQWLfAPxFJoG4e_"></div>
+            </div>
+
+            <button type="submit">Login</button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
