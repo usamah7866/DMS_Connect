@@ -1,12 +1,440 @@
-<h2>Teacher Dashboard</h2>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teacher Dashboard</title>
+    <style>
+        body { margin: 0; font-family: "Segoe UI", sans-serif; background: #f4f7fb; color: #1f2937; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: linear-gradient(180deg, #16325c, #1e3c72); color: white; padding: 24px 20px; box-sizing: border-box; }
+        .sidebar h2 { margin: 0 0 8px; }
+        .sidebar p { margin: 0; color: rgba(255, 255, 255, 0.82); font-size: 14px; }
+        .nav-group { margin-top: 24px; }
+        .nav-link { display: block; padding: 12px 14px; margin-bottom: 10px; border-radius: 10px; text-decoration: none; color: white; background: rgba(255, 255, 255, 0.1); }
+        .nav-link.active, .nav-link:hover { background: rgba(255, 255, 255, 0.22); }
+        .logout { display: inline-block; margin-top: 24px; color: white; text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
+        .content { flex: 1; padding: 28px; box-sizing: border-box; }
+        .hero, .panel, .card, .message { background: white; border-radius: 16px; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
+        .hero { padding: 24px; margin-bottom: 20px; display: flex; justify-content: space-between; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .profile-chip { width: 60px; height: 60px; border-radius: 50%; background: #1e3c72; color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; margin-right: 16px; }
+        .hero-left { display: flex; align-items: center; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; width: 100%; }
+        .card { padding: 18px; }
+        .card-label { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+        .card-value { font-size: 26px; font-weight: 700; }
+        .message { padding: 14px 16px; margin-bottom: 14px; border-left: 5px solid #2563eb; }
+        .message.error { border-left-color: #dc2626; }
+        .notification-panel { border: 1px solid #bfdbfe; background: #eff6ff; }
+        .notification-item { padding: 12px 0; border-bottom: 1px solid #dbeafe; }
+        .notification-item.unread { background: #dbeafe; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .notification-item:last-child { border-bottom: none; }
+        .notification-actions { margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .notification-tag { display: inline-block; background: #1d4ed8; color: white; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; }
+        .toolbar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+        .toolbar a { text-decoration: none; padding: 10px 16px; border-radius: 999px; color: #16325c; background: #dbe7ff; font-weight: 600; }
+        .toolbar a.active { background: #16325c; color: white; }
+        .panel { padding: 24px; margin-bottom: 20px; }
+        .panel h3 { margin-top: 0; }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+        input, textarea, select { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1; margin-top: 8px; margin-bottom: 14px; font: inherit; }
+        textarea { min-height: 120px; resize: vertical; }
+        button { padding: 11px 18px; border-radius: 10px; border: none; background: #1e3c72; color: white; cursor: pointer; font-weight: 600; }
+        button:hover { background: #16325c; }
+        .subtle { color: #6b7280; font-size: 14px; }
+        .list-item { padding: 14px 0; border-bottom: 1px solid #e5e7eb; }
+        .list-item:last-child { border-bottom: none; }
+        .exam-link { display: inline-block; margin-right: 8px; margin-bottom: 8px; padding: 8px 12px; border-radius: 999px; text-decoration: none; background: #eef2ff; color: #1e3c72; }
+        .exam-link.active { background: #1e3c72; color: white; }
+        .stats-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+        .mini-stat { background: #f8fafc; border-radius: 12px; padding: 12px; }
+        .mini-stat strong { display: block; font-size: 20px; margin-top: 4px; }
+        .status-done { color: #15803d; font-weight: 700; }
+        .status-not-done { color: #b91c1c; font-weight: 700; }
+        .status-pending { color: #6b7280; font-weight: 700; }
+        .status-read { color: #1d4ed8; font-weight: 700; }
+        .status-present { color: #15803d; font-weight: 700; }
+        .status-absent { color: #b91c1c; font-weight: 700; }
+        details { margin-top: 12px; }
+        summary { cursor: pointer; font-weight: 700; }
+        @media (max-width: 900px) { .layout { flex-direction: column; } .sidebar { width: 100%; } .content { padding: 18px; } .stats-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <h2>DMS Connect</h2>
+        <p>Teacher academic workspace</p>
+        <div class="nav-group">
+            {% if class_subjects %}
+                {% for cs in class_subjects %}
+                    <a class="nav-link {% if selected_class and cs.id == selected_class.id %}active{% endif %}" href="{% url 'teacher_dashboard' %}?class_name={{ cs.class_name }}&subject={{ cs.subject }}&panel={{ panel }}">{{ cs.class_name }} - {{ cs.subject }}</a>
+                {% endfor %}
+            {% else %}
+                <p>No class assignments found.</p>
+            {% endif %}
+        </div>
+        <a class="logout" href="{% url 'logout' %}">Logout</a>
+    </aside>
 
-<form method="POST">
-    {% csrf_token %}
-    
-    <input type="text" name="class_name" placeholder="Class"><br><br>
-    <input type="text" name="subject" placeholder="Subject"><br><br>
-    
-    <textarea name="description" placeholder="Homework"></textarea><br><br>
-    
-    <button type="submit">Add Homework</button>
-</form>
+    <main class="content">
+        {% for message in messages %}
+            <div class="message {% if message.tags == 'error' %}error{% endif %}">{{ message }}</div>
+        {% endfor %}
+
+        {% if notifications and panel == 'students' %}
+            <section class="panel notification-panel">
+                <h3>School Notifications</h3>
+                {% for item in notifications %}
+                    <div class="notification-item {% if item.is_unread %}unread{% endif %}">
+                        <strong>{{ item.title }}</strong>
+                        <div class="subtle">{{ item.created_at|date:"Y-m-d H:i" }}</div>
+                        <p>{{ item.message }}</p>
+                        <div class="notification-actions">
+                            {% if item.is_unread %}
+                                <span class="notification-tag">Unread</span>
+                                <form method="post" style="margin:0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="mark_notification_read">
+                                    <input type="hidden" name="class_name" value="{{ selected_class.class_name }}">
+                                    <input type="hidden" name="subject" value="{{ selected_class.subject }}">
+                                    <input type="hidden" name="panel" value="{{ panel }}">
+                                    <input type="hidden" name="notification_id" value="{{ item.id }}">
+                                    <button type="submit">Mark as Read</button>
+                                </form>
+                            {% else %}
+                                <span class="subtle">Read</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </section>
+        {% endif %}
+
+        <section class="hero">
+            <div class="hero-left">
+                <div class="profile-chip">{{ teacher.user.username|first|upper }}</div>
+                <div>
+                    <h1 style="margin:0;">{{ teacher.user.get_full_name|default:teacher.user.username }}</h1>
+                    <p class="subtle" style="margin:6px 0 0;">Account: {{ teacher.user.username }}</p>
+                    <p class="subtle" style="margin:6px 0 0;">Qualification: {{ teacher.qualification|default:"Not added yet" }}</p>
+                    {% if selected_class %}
+                        <p class="subtle" style="margin:6px 0 0;">Current class: {{ selected_class.class_name }} | {{ selected_class.subject }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if selected_class %}
+                <div class="summary">
+                    <div class="card"><div class="card-label">Total Students</div><div class="card-value">{{ students|length }}</div></div>
+                    <div class="card"><div class="card-label">Attendance Records</div><div class="card-value">{{ attendance_history_rows|length }}</div></div>
+                    <div class="card"><div class="card-label">Exams</div><div class="card-value">{{ exams|length }}</div></div>
+                    <div class="card"><div class="card-label">Digital Diary Posts</div><div class="card-value">{{ homework_list|length }}</div></div>
+                </div>
+            {% endif %}
+        </section>
+
+        <div class="toolbar">
+            <a class="{% if panel == 'teacher_attendance' %}active{% endif %}" href="{% url 'teacher_dashboard' %}?panel=teacher_attendance&teacher_year={{ selected_teacher_year }}&teacher_month={{ selected_teacher_month }}">View Attendance</a>
+        {% if selected_class %}
+                <a class="{% if panel == 'students' %}active{% endif %}" href="{% url 'teacher_dashboard' %}?class_name={{ selected_class.class_name }}&subject={{ selected_class.subject }}&panel=students">Students</a>
+                <a class="{% if panel == 'attendance' %}active{% endif %}" href="{% url 'teacher_dashboard' %}?class_name={{ selected_class.class_name }}&subject={{ selected_class.subject }}&panel=attendance{% if selected_attendance_date %}&attendance_date={{ selected_attendance_date }}{% endif %}">Attendance</a>
+                <a class="{% if panel == 'exams' %}active{% endif %}" href="{% url 'teacher_dashboard' %}?class_name={{ selected_class.class_name }}&subject={{ selected_class.subject }}&panel=exams{% if selected_exam %}&exam={{ selected_exam.id }}{% endif %}">Exams</a>
+                <a class="{% if panel == 'homework' %}active{% endif %}" href="{% url 'teacher_dashboard' %}?class_name={{ selected_class.class_name }}&subject={{ selected_class.subject }}&panel=homework">Digital Diary</a>
+                <a class="{% if panel == 'add_diary' %}active{% endif %}" href="{% url 'teacher_dashboard' %}?class_name={{ selected_class.class_name }}&subject={{ selected_class.subject }}&panel=add_diary">Add HW</a>
+        {% endif %}
+        </div>
+
+        {% if panel == 'teacher_attendance' %}
+            <div class="grid-2">
+                <section class="panel">
+                    <h3>Monthly Attendance</h3>
+                    <form method="get">
+                        <input type="hidden" name="panel" value="teacher_attendance">
+                        <label for="teacher_year">Year</label>
+                        <select id="teacher_year" name="teacher_year">
+                            {% for year_option in teacher_year_choices %}
+                                <option value="{{ year_option }}" {% if year_option == selected_teacher_year %}selected{% endif %}>{{ year_option }}</option>
+                            {% endfor %}
+                        </select>
+                        <label for="teacher_month">Month</label>
+                        <select id="teacher_month" name="teacher_month">
+                            {% for month_value, month_label in teacher_month_choices %}
+                                <option value="{{ month_value }}" {% if month_value == selected_teacher_month %}selected{% endif %}>{{ month_label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit">View Attendance</button>
+                    </form>
+                    <div class="stats-row">
+                        <div class="mini-stat">Present<strong>{{ teacher_attendance_summary.present }}</strong></div>
+                        <div class="mini-stat">Absent<strong>{{ teacher_attendance_summary.absent }}</strong></div>
+                        <div class="mini-stat">Marked Days<strong>{{ teacher_attendance_summary.marked_days }}</strong></div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <h3>Attendance Record</h3>
+                    {% if teacher_attendance_rows %}
+                        <table>
+                            <thead><tr><th>Date</th><th>Status</th><th>Remarks</th></tr></thead>
+                            <tbody>
+                                {% for row in teacher_attendance_rows %}
+                                    <tr>
+                                        <td>{{ row.date|date:"d M Y" }}</td>
+                                        <td>
+                                            {% if row.status == 'present' %}
+                                                <span class="status-present">Present</span>
+                                            {% elif row.status == 'absent' %}
+                                                <span class="status-absent">Absent</span>
+                                            {% else %}
+                                                <span class="subtle">Not marked</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{% if row.remarks %}{{ row.remarks }}{% else %}<span class="subtle">-</span>{% endif %}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No attendance has been marked for this month yet.</p>
+                    {% endif %}
+                </section>
+            </div>
+        {% elif selected_class %}
+            {% if panel == 'students' %}
+                <section class="panel">
+                    <h3>Students in {{ selected_class.class_name }}</h3>
+                    <p class="subtle">This section now shows the full class roster.</p>
+                    {% if students %}
+                        <table>
+                            <thead><tr><th>Roll No.</th><th>Student</th><th>Account Username</th></tr></thead>
+                            <tbody>
+                                {% for student in students %}
+                                    <tr><td>{{ student.roll_number }}</td><td>{{ student.name }}</td><td>{{ student.user_account.username }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No students are assigned to this class yet.</p>
+                    {% endif %}
+                </section>
+            {% elif panel == 'attendance' %}
+                <div class="grid-2">
+                    <section class="panel">
+                        <h3>Mark Attendance</h3>
+                        <p class="subtle">Choose a date to create or edit attendance for {{ selected_class.class_name }} - {{ selected_class.subject }}.</p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="save_attendance">
+                            <input type="hidden" name="class_name" value="{{ selected_class.class_name }}">
+                            <input type="hidden" name="subject" value="{{ selected_class.subject }}">
+                            <input type="hidden" name="panel" value="attendance">
+                            <label for="attendance_date">Date</label>
+                            <input id="attendance_date" type="date" name="attendance_date" value="{{ selected_attendance_date }}" required>
+                            {% if selected_attendance %}
+                                <p class="subtle">Showing saved attendance for {{ selected_attendance.date }}. You can update it and save again.</p>
+                            {% endif %}
+                            {% if attendance_form_rows %}
+                                <table>
+                                    <thead><tr><th>Roll No.</th><th>Student</th><th>Status</th></tr></thead>
+                                    <tbody>
+                                        {% for row in attendance_form_rows %}
+                                            <tr>
+                                                <td>{{ row.student.roll_number }}</td>
+                                                <td>{{ row.student.name }}</td>
+                                                <td>
+                                                    <select name="attendance_{{ row.student.id }}">
+                                                        {% for value, label in attendance_statuses %}
+                                                            <option value="{{ value }}" {% if row.status == value %}selected{% endif %}>{{ label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                <button type="submit">Save Attendance</button>
+                            {% else %}
+                                <p>No students available for attendance.</p>
+                            {% endif %}
+                        </form>
+                    </section>
+
+                    <section class="panel">
+                        <h3>Recent Attendance</h3>
+                        {% if attendance_history_rows %}
+                            {% for item in attendance_history_rows %}
+                                <div class="list-item">
+                                    <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;">
+                                        <strong>{{ item.attendance.date }}</strong>
+                                        <a class="exam-link" href="{% url 'teacher_dashboard' %}?class_name={{ selected_class.class_name }}&subject={{ selected_class.subject }}&panel=attendance&attendance_date={{ item.attendance.date }}">Open</a>
+                                    </div>
+                                    <div class="stats-row">
+                                        <div class="mini-stat">Present<strong>{{ item.present }}</strong></div>
+                                        <div class="mini-stat">Absent<strong>{{ item.absent }}</strong></div>
+                                        <div class="mini-stat">Late<strong>{{ item.late }}</strong></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>No attendance has been recorded yet.</p>
+                        {% endif %}
+                    </section>
+                </div>
+            {% elif panel == 'exams' %}
+                <div class="grid-2">
+                    <section class="panel">
+                        <h3>Create Exam</h3>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="create_exam">
+                            <input type="hidden" name="class_name" value="{{ selected_class.class_name }}">
+                            <input type="hidden" name="subject" value="{{ selected_class.subject }}">
+                            <input type="hidden" name="panel" value="exams">
+                            <label for="exam_title">Exam Title</label>
+                            <input id="exam_title" type="text" name="exam_title" placeholder="Mid Term, Quiz 1, Final Exam" required>
+                            <label for="exam_date">Exam Date</label>
+                            <input id="exam_date" type="date" name="exam_date" value="{{ today }}" required>
+                            <label for="total_marks">Total Marks</label>
+                            <input id="total_marks" type="number" min="1" name="total_marks" placeholder="100" required>
+                            <button type="submit">Create Exam</button>
+                        </form>
+                    </section>
+
+                    <section class="panel">
+                        <h3>Available Exams</h3>
+                        {% if exams %}
+                            <div style="margin-bottom:12px;">
+                                {% for exam in exams %}
+                                    <a class="exam-link {% if selected_exam and selected_exam.id == exam.id %}active{% endif %}" href="{% url 'teacher_dashboard' %}?class_name={{ selected_class.class_name }}&subject={{ selected_class.subject }}&panel=exams&exam={{ exam.id }}">{{ exam.title }}</a>
+                                {% endfor %}
+                            </div>
+                            {% if selected_exam %}
+                                <div class="card" style="margin-top:10px;">
+                                    <div class="card-label">Selected Exam</div>
+                                    <div><strong>{{ selected_exam.title }}</strong></div>
+                                    <div class="subtle">{{ selected_exam.exam_date }} | Total Marks: {{ selected_exam.total_marks }}</div>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p>No exams created yet.</p>
+                        {% endif %}
+                    </section>
+                </div>
+
+                {% if selected_exam %}
+                    <section class="panel">
+                        <h3>Enter Results for {{ selected_exam.title }}</h3>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="save_exam_results">
+                            <input type="hidden" name="class_name" value="{{ selected_class.class_name }}">
+                            <input type="hidden" name="subject" value="{{ selected_class.subject }}">
+                            <input type="hidden" name="panel" value="exams">
+                            <input type="hidden" name="exam_id" value="{{ selected_exam.id }}">
+                            {% if student_exam_rows %}
+                                <table>
+                                    <thead><tr><th>Roll No.</th><th>Student</th><th>Marks Obtained</th></tr></thead>
+                                    <tbody>
+                                        {% for row in student_exam_rows %}
+                                            <tr>
+                                                <td>{{ row.student.roll_number }}</td>
+                                                <td>{{ row.student.name }}</td>
+                                                <td><input type="number" step="0.01" min="0" max="{{ selected_exam.total_marks }}" name="marks_{{ row.student.id }}" value="{{ row.marks }}"></td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                <button type="submit">Save Results</button>
+                            {% else %}
+                                <p>No students available for result entry.</p>
+                            {% endif %}
+                        </form>
+                    </section>
+                {% endif %}
+            {% elif panel == 'add_diary' %}
+                <section class="panel">
+                    <h3>Add Digital Diary Entry</h3>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_homework">
+                        <input type="hidden" name="class_name" value="{{ selected_class.class_name }}">
+                        <input type="hidden" name="subject" value="{{ selected_class.subject }}">
+                        <input type="hidden" name="panel" value="add_diary">
+                        <label for="description">Digital Diary Note</label>
+                        <textarea id="description" name="description" placeholder="Write the diary instructions, homework, reminders, or note for this class." required></textarea>
+                        <button type="submit">Publish Digital Diary</button>
+                    </form>
+                </section>
+            {% elif panel == 'homework' %}
+                <section class="panel">
+                    <h3>Digital Diary History</h3>
+                    {% if diary_entries %}
+                        {% for item in diary_entries %}
+                            <div class="list-item">
+                                <details>
+                                    <summary>{{ item.homework.date }} | {{ item.homework.subject }} | Done {{ item.done_count }} | Not Done {{ item.not_done_count }} | Pending {{ item.pending_count }}</summary>
+                                    <div style="margin-top:12px;">{{ item.homework.description }}</div>
+                                    {% if item.student_feedback_rows %}
+                                        <table>
+                                            <thead><tr><th>Student</th><th>Status</th><th>Message</th><th>Teacher Read</th><th>Updated</th></tr></thead>
+                                            <tbody>
+                                                {% for row in item.student_feedback_rows %}
+                                                    <tr>
+                                                        <td>{{ row.student.name }}</td>
+                                                        <td>
+                                                            {% if row.status == 'done' %}
+                                                                <span class="status-done">Done</span>
+                                                            {% elif row.status == 'not_done' %}
+                                                                <span class="status-not-done">Not Done</span>
+                                                            {% else %}
+                                                                <span class="status-pending">Pending</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>{% if row.message %}{{ row.message }}{% else %}<span class="subtle">No message</span>{% endif %}</td>
+                                                        <td>
+                                                            {% if row.message %}
+                                                                {% if row.teacher_read %}
+                                                                    <span class="status-read">&#10003; Read</span>
+                                                                    {% if row.teacher_read_at %}<div class="subtle">{{ row.teacher_read_at|date:"Y-m-d H:i" }}</div>{% endif %}
+                                                                {% elif row.feedback_id %}
+                                                                    <form method="post" style="margin:0;">
+                                                                        {% csrf_token %}
+                                                                        <input type="hidden" name="action" value="mark_diary_read">
+                                                                        <input type="hidden" name="class_name" value="{{ selected_class.class_name }}">
+                                                                        <input type="hidden" name="subject" value="{{ selected_class.subject }}">
+                                                                        <input type="hidden" name="panel" value="homework">
+                                                                        <input type="hidden" name="feedback_id" value="{{ row.feedback_id }}">
+                                                                        <button type="submit">Tick Read</button>
+                                                                    </form>
+                                                                {% else %}
+                                                                    <span class="subtle">-</span>
+                                                                {% endif %}
+                                                            {% else %}
+                                                                <span class="subtle">No message</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>{% if row.updated_at %}{{ row.updated_at|date:"Y-m-d H:i" }}{% else %}<span class="subtle">-</span>{% endif %}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    {% endif %}
+                                </details>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No digital diary entries posted yet.</p>
+                    {% endif %}
+                </section>
+            {% endif %}
+        {% else %}
+            <section class="panel">
+                <h3>No class assignments found</h3>
+                <p>Assign classes and subjects to this teacher from the admin panel first.</p>
+            </section>
+        {% endif %}
+    </main>
+</div>
+</body>
+</html>

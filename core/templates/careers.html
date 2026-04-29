@@ -1,0 +1,283 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Careers | Decent Model School</title>
+    <style>
+        :root {
+            --navy-900: #0d2446;
+            --navy-800: #143667;
+            --paper: #f8fbff;
+            --card: rgba(255, 255, 255, 0.9);
+            --ink: #14213a;
+            --muted: #60708f;
+            --accent: #ef5b3c;
+            --shadow: 0 24px 60px rgba(17, 36, 72, 0.14);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            color: var(--ink);
+            background: linear-gradient(180deg, #eef5ff 0%, #f9fbff 55%, #edf4ff 100%);
+        }
+        .page {
+            width: min(1280px, calc(100% - 24px));
+            margin: 16px auto 32px;
+        }
+        .topbar, .hero, .sidebar-card, .form-wrap, .message {
+            background: var(--card);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding: 18px 24px;
+            margin-bottom: 20px;
+        }
+        .brand {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+        .brand-logo {
+            width: 56px;
+            height: 56px;
+            border-radius: 18px;
+            object-fit: contain;
+            background: white;
+            padding: 6px;
+        }
+        .brand h1, .hero h2, .section-title { margin: 0; }
+        .topbar a {
+            text-decoration: none;
+            color: var(--muted);
+            font-weight: 700;
+        }
+        .portal-link {
+            padding: 12px 16px;
+            border-radius: 999px;
+            background: var(--navy-900);
+            color: white !important;
+        }
+        .hero {
+            padding: 28px;
+            margin-bottom: 22px;
+        }
+        .eyebrow {
+            margin: 0 0 10px;
+            color: var(--accent);
+            font-size: 12px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+        .hero h2 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            line-height: 1.05;
+            max-width: 14ch;
+        }
+        .hero p {
+            color: var(--muted);
+            max-width: 64ch;
+            line-height: 1.75;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 0.38fr 1fr;
+            gap: 24px;
+        }
+        .sidebar {
+            display: grid;
+            gap: 18px;
+            align-content: start;
+        }
+        .sidebar-card, .form-wrap {
+            padding: 22px;
+        }
+        .feature-list {
+            margin: 0;
+            padding-left: 18px;
+            display: grid;
+            gap: 10px;
+        }
+        .form-wrap { overflow: hidden; }
+        .section-title {
+            font-size: 1.25rem;
+            margin-bottom: 14px;
+            color: var(--navy-900);
+        }
+        form { display: grid; gap: 24px; }
+        .form-section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--navy-900);
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(20,54,103,0.1);
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+        label {
+            display: grid;
+            gap: 8px;
+            font-weight: 700;
+            color: var(--navy-900);
+        }
+        input, select, textarea {
+            width: 100%;
+            border: 1px solid rgba(20,54,103,0.14);
+            border-radius: 16px;
+            padding: 14px 16px;
+            font: inherit;
+            background: rgba(255,255,255,0.96);
+            color: var(--ink);
+        }
+        textarea { resize: vertical; }
+        .message {
+            padding: 14px 18px;
+            margin-bottom: 18px;
+            border-left: 5px solid #2563eb;
+        }
+        .errorlist {
+            margin: 0;
+            padding-left: 18px;
+            color: #b91c1c;
+            font-size: 14px;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .btn {
+            border: none;
+            border-radius: 999px;
+            min-height: 50px;
+            padding: 0 20px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--navy-800), #1c4f8d);
+            color: white;
+        }
+        .btn-secondary {
+            background: white;
+            color: var(--navy-900);
+            border: 1px solid rgba(20,54,103,0.12);
+        }
+        .subtle { color: var(--muted); line-height: 1.7; }
+        @media (max-width: 980px) {
+            .layout, .form-grid { grid-template-columns: 1fr; }
+            .topbar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="topbar">
+            <div class="brand">
+                <img class="brand-logo" src="{% static 'core/images/logo.png' %}" alt="Decent Model School logo">
+                <div>
+                    <p class="eyebrow">Established 1980</p>
+                    <h1>Decent Model School</h1>
+                </div>
+            </div>
+            <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                <a href="/">Portal Login</a>
+                <a class="portal-link" href="/careers/">Careers</a>
+            </div>
+        </header>
+
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+
+        <section class="hero">
+            <p class="eyebrow">Join Our Team</p>
+            <h2>Apply for teaching or school staff opportunities at Decent Model School.</h2>
+            <p>Career applications are saved in the school system, CV files are stored securely, and submissions are emailed to the school hiring address for review.</p>
+        </section>
+
+        <section class="layout">
+            <aside class="sidebar">
+                <div class="sidebar-card">
+                    <p class="eyebrow">Hiring Email</p>
+                    <h3 class="section-title">{{ selected_campus }}</h3>
+                    <p class="subtle">{{ career_email }}</p>
+                </div>
+                <div class="sidebar-card">
+                    <p class="eyebrow">What to Prepare</p>
+                    <ul class="feature-list">
+                        <li>Updated CV or resume</li>
+                        <li>Correct campus selection</li>
+                        <li>Position you want to apply for</li>
+                        <li>Qualification and experience details</li>
+                        <li>Short cover letter or note</li>
+                    </ul>
+                </div>
+            </aside>
+
+            <div class="form-wrap">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="form-section-title">Application Details</div>
+                    <div class="form-grid">
+                        {% for field in form %}
+                            {% if field.name == "campus" or field.name == "position_applied_for" or field.name == "full_name" or field.name == "email" or field.name == "phone" or field.name == "date_of_birth" or field.name == "address" or field.name == "cnic_number" or field.name == "religion" or field.name == "highest_qualification" %}
+                                <label>
+                                    <span>{{ field.label }}</span>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </label>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-section-title">Experience Details</div>
+                    <div class="form-grid">
+                        {% for field in form %}
+                            {% if field.name == "organization_name" or field.name == "job_post_name" or field.name == "years_of_experience" %}
+                                <label>
+                                    <span>{{ field.label }}</span>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </label>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <div class="form-section-title">Professional Note</div>
+                    <div class="form-grid">
+                        {% for field in form %}
+                            {% if field.name == "cover_letter" or field.name == "cv_file" %}
+                                <label style="{% if field.name == 'cover_letter' %}grid-column: 1 / -1;{% endif %}">
+                                    <span>{{ field.label }}</span>
+                                    {{ field }}
+                                    {{ field.errors }}
+                                </label>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-primary" type="submit">Submit Career Application</button>
+                        <button class="btn btn-secondary" type="reset">Reset Form</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

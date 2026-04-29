@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Dashboard</title>
+    <style>
+        body { margin: 0; font-family: "Segoe UI", sans-serif; background: #f4f7fb; color: #1f2937; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 270px; background: linear-gradient(180deg, #16325c, #1e3c72); color: white; padding: 24px 20px; box-sizing: border-box; }
+        .sidebar h2 { margin: 0 0 8px; }
+        .sidebar p { margin: 0; color: rgba(255,255,255,0.82); font-size: 14px; }
+        .nav-group { margin-top: 24px; }
+        .nav-link { display: block; padding: 12px 14px; margin-bottom: 10px; border-radius: 10px; text-decoration: none; color: white; background: rgba(255,255,255,0.10); }
+        .nav-link.active, .nav-link:hover { background: rgba(255,255,255,0.22); }
+        .nav-link.alert { background: rgba(185, 28, 28, 0.88); }
+        .nav-link.alert.active, .nav-link.alert:hover { background: rgba(153, 27, 27, 0.96); }
+        .nav-badge { float: right; min-width: 20px; height: 20px; border-radius: 999px; background: white; color: #b91c1c; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+        .student-switcher { margin-top: 22px; }
+        .student-pill { display: block; text-decoration: none; color: white; padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; background: rgba(255,255,255,0.08); }
+        .student-pill.active, .student-pill:hover { background: rgba(255,255,255,0.18); }
+        .logout { display: inline-block; margin-top: 24px; color: white; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.5); }
+        .content { flex: 1; padding: 28px; box-sizing: border-box; }
+        .panel, .card, .message { background: white; border-radius: 16px; box-shadow: 0 10px 24px rgba(15,23,42,0.08); }
+        .panel { padding: 24px; margin-bottom: 20px; }
+        .hero { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .card { padding: 18px; }
+        .label { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+        .value { font-size: 26px; font-weight: 700; }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .section-toolbar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+        .section-link { text-decoration: none; padding: 10px 16px; border-radius: 999px; color: #16325c; background: #dbe7ff; font-weight: 600; }
+        .section-link.active { background: #16325c; color: white; }
+        .message { padding: 14px 16px; margin-bottom: 14px; border-left: 5px solid #2563eb; }
+        .notification-panel { border: 1px solid #bfdbfe; background: #eff6ff; }
+        .notification-item { padding: 12px 0; border-bottom: 1px solid #dbeafe; }
+        .notification-item.unread { background: #dbeafe; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .notification-item:last-child { border-bottom: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+        .subtle { color: #6b7280; }
+        .attendance-good { color: #166534; font-weight: 700; }
+        .attendance-average { color: #a16207; font-weight: 700; }
+        .attendance-needs_attention { color: #b91c1c; font-weight: 700; }
+        .list-item { padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
+        .list-item:last-child { border-bottom: none; }
+        .status-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+        .status-option { display: inline-flex; align-items: center; gap: 6px; }
+        textarea { width: 100%; box-sizing: border-box; min-height: 90px; border-radius: 10px; border: 1px solid #cbd5e1; padding: 10px 12px; font: inherit; }
+        button { padding: 10px 16px; border-radius: 10px; border: none; background: #1e3c72; color: white; cursor: pointer; font-weight: 600; }
+        button:hover { background: #16325c; }
+        .assembly { font-weight: 700; color: #16325c; margin-bottom: 12px; }
+        .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .notification-actions { margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .notification-tag { display: inline-block; background: #1d4ed8; color: white; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; }
+        .download-link { display: inline-block; text-decoration: none; color: white; background: #16325c; padding: 10px 16px; border-radius: 10px; font-weight: 600; }
+        .fee-note { padding: 14px 16px; border-radius: 14px; background: #eff6ff; color: #16325c; font-weight: 600; margin-bottom: 18px; }
+        .fee-note.alert { background: #fee2e2; color: #991b1b; }
+        .fee-status-paid { color: #166534; font-weight: 700; }
+        .fee-status-unpaid { color: #b91c1c; font-weight: 700; }
+        .graph-card { padding: 20px; }
+        .graph-row { margin-bottom: 16px; }
+        .graph-row:last-child { margin-bottom: 0; }
+        .graph-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-weight: 600; }
+        .graph-track { width: 100%; height: 14px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+        .graph-fill { height: 100%; border-radius: 999px; }
+        .positive-diff { color: #166534; font-weight: 700; }
+        .negative-diff { color: #b91c1c; font-weight: 700; }
+        .subject-summary { cursor: pointer; font-weight: 700; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        @media (max-width: 900px) { .layout { flex-direction: column; } .sidebar { width: 100%; } .content { padding: 18px; } }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <h2>DMS Connect</h2>
+        <p>Student portal</p>
+
+        {% if student %}
+            <div class="nav-group">
+                <a class="nav-link {% if panel == 'dashboard' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=dashboard">Dashboard</a>
+                <a class="nav-link {% if panel == 'attendance' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=attendance">Attendance</a>
+                <a class="nav-link {% if panel == 'exam_results' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=exam_results">Academic Performance</a>
+                <a class="nav-link {% if panel == 'digital_diary' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=digital_diary">Digital Diary</a>
+                <a class="nav-link {% if panel == 'timetable' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=timetable">Timetable</a>
+                <a class="nav-link {% if fee_summary.is_fee_alert %}alert{% endif %} {% if panel == 'fee' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=fee">Fee {% if fee_summary.is_fee_alert %}<span class="nav-badge">1</span>{% endif %}</a>
+            </div>
+        {% endif %}
+
+        {% if show_student_switcher %}
+            <div class="student-switcher">
+                {% for linked_student in linked_students %}
+                    <a class="student-pill {% if student and linked_student.id == student.id %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ linked_student.id }}&panel={{ panel }}">
+                        {{ linked_student.name }} - {{ linked_student.class_name }}
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <a class="logout" href="{% url 'logout' %}">Logout</a>
+    </aside>
+
+    <main class="content">
+        {% for message in messages %}
+            <div class="message">{{ message }}</div>
+        {% endfor %}
+
+        {% if notifications and panel == 'dashboard' %}
+            <div class="panel notification-panel">
+                <h2 style="margin-top:0;">School Notifications</h2>
+                {% for item in notifications %}
+                    <div class="notification-item {% if item.is_unread %}unread{% endif %}">
+                        <strong>{{ item.title }}</strong>
+                        <div class="subtle">{{ item.created_at|date:"Y-m-d H:i" }}</div>
+                        <p>{{ item.message }}</p>
+                        <div class="notification-actions">
+                            {% if item.is_unread %}
+                                <span class="notification-tag">Unread</span>
+                                <form method="post" style="margin:0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="mark_notification_read">
+                                    <input type="hidden" name="student_id" value="{{ student.id }}">
+                                    <input type="hidden" name="panel" value="{{ panel }}">
+                                    <input type="hidden" name="notification_id" value="{{ item.id }}">
+                                    <button type="submit">Mark as Read</button>
+                                </form>
+                            {% else %}
+                                <span class="subtle">Read</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="panel hero">
+            {% if student %}
+                <div>
+                    <h1 style="margin:0 0 8px;">{{ student.name }}</h1>
+                    <div class="subtle">Class: {{ student.class_name }}</div>
+                    <div class="subtle">Roll Number: {{ student.roll_number }}</div>
+                </div>
+            {% else %}
+                <div>
+                    <h1 style="margin:0 0 8px;">Student Dashboard</h1>
+                    <div class="subtle">No student is linked to this account yet.</div>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if student %}
+            {% if panel == 'dashboard' %}
+                <div class="summary">
+                    <div class="card"><div class="label">Digital Diary Items</div><div class="value">{{ homework|length }}</div></div>
+                    <div class="card"><div class="label">Present Days</div><div class="value">{{ attendance_summary.present }}</div></div>
+                    <div class="card"><div class="label">Absent Days</div><div class="value">{{ attendance_summary.absent }}</div></div>
+                    <div class="card"><div class="label">Exam Results</div><div class="value">{{ exam_results|length }}</div></div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <a class="download-link" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=dashboard&download=progress_card">Download Annual Progress Report PDF</a>
+                </div>
+
+                <div class="analytics-grid">
+                    <div class="card">
+                        <div class="label">Overall Attendance</div>
+                        <div class="value">{{ analytics.overall_attendance_percentage }}%</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Overall Percentage</div>
+                        <div class="value">{{ analytics.overall_percentage }}%</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Average Marks per Exam</div>
+                        <div class="value">{{ analytics.average_marks }}</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Total Obtained</div>
+                        <div class="value">{{ analytics.total_obtained_marks }}</div>
+                        <div class="subtle">Out of {{ analytics.total_possible_marks }}</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Performance Band</div>
+                        <div class="value" style="font-size:22px;">{{ analytics.performance_band }}</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Class Average</div>
+                        <div class="value">{{ analytics.class_average_percentage }}%</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">You vs Class</div>
+                        <div class="value" style="font-size:22px;">{{ analytics.class_average_difference }}%</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">{{ fee_summary.current_month_name }} Fee</div>
+                        <div class="value" style="font-size:22px;">{{ fee_summary.current_month_status }}</div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="panel">
+                        <h2 style="margin-top:0;">{{ progress_cards.monthly.title }}</h2>
+                        <p class="attendance-{{ progress_cards.monthly.attendance_band }}">Attendance Trend</p>
+                        <table>
+                            <tbody>
+                                <tr><th>Attendance</th><td>{{ progress_cards.monthly.attendance_percentage }}% ({{ progress_cards.monthly.attendance_total }} records)</td></tr>
+                                <tr><th>Diary Activity</th><td>{{ progress_cards.monthly.diary_count }} entries</td></tr>
+                                <tr><th>Exam Activity</th><td>{{ progress_cards.monthly.exam_count }} results</td></tr>
+                                <tr><th>Marks Overview</th><td>{{ progress_cards.monthly.overall_percentage }}%</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="panel">
+                        <h2 style="margin-top:0;">{{ progress_cards.session.title }}</h2>
+                        <p class="attendance-{{ progress_cards.session.attendance_band }}">Attendance Trend</p>
+                        <table>
+                            <tbody>
+                                <tr><th>Attendance</th><td>{{ progress_cards.session.attendance_percentage }}% ({{ progress_cards.session.attendance_total }} records)</td></tr>
+                                <tr><th>Diary Activity</th><td>{{ progress_cards.session.diary_count }} entries</td></tr>
+                                <tr><th>Exam Activity</th><td>{{ progress_cards.session.exam_count }} results</td></tr>
+                                <tr><th>Marks Overview</th><td>{{ progress_cards.session.overall_percentage }}%</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="panel graph-card">
+                        <h2 style="margin-top:0;">Progress Graph</h2>
+                        <p class="subtle">This compares your marks and attendance with the class average.</p>
+                        {% for metric in analytics.dashboard_graph_metrics %}
+                            <div class="graph-row">
+                                <div class="graph-label">
+                                    <span>{{ metric.label }}</span>
+                                    <span>{{ metric.value }}%</span>
+                                </div>
+                                <div class="graph-track">
+                                    <div class="graph-fill" style="width: {{ metric.value }}%; background: {{ metric.color }};"></div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="panel">
+                        <h2 style="margin-top:0;">Latest Digital Diary</h2>
+                        {% if latest_homework %}
+                            {% for hw in latest_homework %}
+                                <div class="list-item">
+                                    <p><strong>{{ hw.subject }}</strong> | {{ hw.date }}</p>
+                                    <p>{{ hw.description }}</p>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>No digital diary available.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="panel">
+                        <h2 style="margin-top:0;">Latest Marks</h2>
+                        {% if latest_results %}
+                            {% for result in latest_results %}
+                                <div class="list-item">
+                                    <p><strong>{{ result.exam.title }}</strong> | {{ result.exam.subject }}</p>
+                                    <p>{{ result.marks_obtained }} / {{ result.exam.total_marks }} on {{ result.exam.exam_date }}</p>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>No marks uploaded yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="panel">
+                        <h2 style="margin-top:0;">Best Subject</h2>
+                        {% if analytics.best_subject %}
+                            <p><strong>{{ analytics.best_subject.subject }}</strong></p>
+                            <p>{{ analytics.best_subject.obtained }} / {{ analytics.best_subject.total }}</p>
+                            <p class="subtle">{{ analytics.best_subject.percentage }}%</p>
+                        {% else %}
+                            <p>No exam analytics available yet.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="panel">
+                        <h2 style="margin-top:0;">Needs Attention</h2>
+                        {% if analytics.needs_attention_subject %}
+                            <p><strong>{{ analytics.needs_attention_subject.subject }}</strong></p>
+                            <p>{{ analytics.needs_attention_subject.obtained }} / {{ analytics.needs_attention_subject.total }}</p>
+                            <p class="subtle">{{ analytics.needs_attention_subject.percentage }}%</p>
+                        {% else %}
+                            <p>No exam analytics available yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2 style="margin-top:0;">Subject Comparison With Class</h2>
+                    {% if analytics.subject_comparison_rows %}
+                        <table>
+                            <thead><tr><th>Subject</th><th>Your %</th><th>Class %</th><th>Difference</th></tr></thead>
+                            <tbody>
+                                {% for row in analytics.subject_comparison_rows %}
+                                    <tr>
+                                        <td>{{ row.subject }}</td>
+                                        <td>{{ row.student_percentage }}%</td>
+                                        <td>{{ row.class_percentage }}%</td>
+                                        <td class="{% if row.difference >= 0 %}positive-diff{% else %}negative-diff{% endif %}">{{ row.difference }}%</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No subject comparison is available yet.</p>
+                    {% endif %}
+                </div>
+            {% elif panel == 'attendance' %}
+                <div class="panel">
+                    <h2 style="margin-top:0;">Attendance</h2>
+                    <div class="summary">
+                        <div class="card"><div class="label">Overall Attendance</div><div class="value">{{ analytics.overall_attendance_percentage }}%</div></div>
+                        <div class="card"><div class="label">Present</div><div class="value">{{ attendance_summary.present }}</div></div>
+                        <div class="card"><div class="label">Absent</div><div class="value">{{ attendance_summary.absent }}</div></div>
+                        <div class="card"><div class="label">Late</div><div class="value">{{ attendance_summary.late }}</div></div>
+                    </div>
+                    {% if attendance_records %}
+                        <table>
+                            <thead><tr><th>Date</th><th>Subject</th><th>Status</th></tr></thead>
+                            <tbody>
+                                {% for record in attendance_records %}
+                                    <tr>
+                                        <td>{{ record.attendance.date }}</td>
+                                        <td>{{ record.attendance.subject }}</td>
+                                        <td>{{ record.get_status_display }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No attendance records available.</p>
+                    {% endif %}
+
+                    <h3 style="margin-top:24px;">Attendance by Month</h3>
+                    {% if analytics.monthly_attendance_rows %}
+                        <table>
+                            <thead><tr><th>Month</th><th>Present</th><th>Absent</th><th>Late</th><th>Total</th><th>Attendance %</th></tr></thead>
+                            <tbody>
+                                {% for row in analytics.monthly_attendance_rows %}
+                                    <tr>
+                                        <td>{{ row.month }}</td>
+                                        <td>{{ row.present }}</td>
+                                        <td>{{ row.absent }}</td>
+                                        <td>{{ row.late }}</td>
+                                        <td>{{ row.total }}</td>
+                                        <td class="attendance-{{ row.band }}">{{ row.percentage }}%</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No monthly attendance data available yet.</p>
+                    {% endif %}
+                </div>
+            {% elif panel == 'exam_results' %}
+                <div class="panel">
+                    <h2 style="margin-top:0;">Academic Performance</h2>
+                    <div class="section-toolbar">
+                        <a class="section-link {% if performance_view == 'subject_wise' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=exam_results&performance_view=subject_wise">Subject Wise Performance</a>
+                        <a class="section-link {% if performance_view == 'mid_term' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=exam_results&performance_view=mid_term">Mid Term</a>
+                        <a class="section-link {% if performance_view == 'final_term' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=exam_results&performance_view=final_term">Final Term</a>
+                    </div>
+                    <div class="summary">
+                        <div class="card"><div class="label">Total Exams</div><div class="value">{{ analytics.exam_count }}</div></div>
+                        <div class="card"><div class="label">Overall Percentage</div><div class="value">{{ analytics.overall_percentage }}%</div></div>
+                        <div class="card"><div class="label">Average Marks</div><div class="value">{{ analytics.average_marks }}</div></div>
+                        <div class="card"><div class="label">Performance</div><div class="value" style="font-size:22px;">{{ analytics.performance_band }}</div></div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="label">Performance Trend</div>
+                            <div class="value" style="font-size:22px;">{{ analytics.marks_trend }}</div>
+                        </div>
+                        <div class="card">
+                            <div class="label">Session Percentage</div>
+                            <div class="value">{{ progress_cards.session.overall_percentage }}%</div>
+                        </div>
+                    </div>
+                    {% if analytics.subject_result_sections %}
+                        {% if performance_view == 'subject_wise' %}
+                            <p class="subtle">Open each subject to see exam marks, subject average, and class comparison.</p>
+                            {% for section in analytics.subject_result_sections %}
+                                <div class="list-item">
+                                    <details>
+                                        <summary class="subject-summary">
+                                            <span>{{ section.subject }}</span>
+                                            <span>{{ section.percentage }}% | {{ section.exam_count }} exam{{ section.exam_count|pluralize }}</span>
+                                        </summary>
+                                        <div class="summary" style="margin-top:16px;">
+                                            <div class="card"><div class="label">Your Average</div><div class="value">{{ section.percentage }}%</div></div>
+                                            <div class="card"><div class="label">Class Average</div><div class="value">{{ section.class_percentage }}%</div></div>
+                                            <div class="card"><div class="label">Difference</div><div class="value" style="font-size:22px;">{{ section.difference }}%</div></div>
+                                            <div class="card"><div class="label">Marks Total</div><div class="value">{{ section.obtained }}</div><div class="subtle">Out of {{ section.total }}</div></div>
+                                        </div>
+                                        {% if section.exam_rows %}
+                                            <table>
+                                                <thead><tr><th>Exam</th><th>Date</th><th>Your Marks</th><th>Class Average</th><th>Difference</th></tr></thead>
+                                                <tbody>
+                                                    {% for row in section.exam_rows %}
+                                                        <tr>
+                                                            <td>{{ row.exam_title }}</td>
+                                                            <td>{{ row.date }}</td>
+                                                            <td>{{ row.student_marks }} ({{ row.student_percentage }}%)</td>
+                                                            <td>{{ row.class_average_marks }} ({{ row.class_average_percentage }}%)</td>
+                                                            <td>{{ row.difference }} <span class="subtle">({{ row.comparison_label }})</span></td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        {% else %}
+                                            <p>No marks uploaded for this subject yet.</p>
+                                        {% endif %}
+                                    </details>
+                                </div>
+                            {% endfor %}
+                        {% elif performance_view == 'mid_term' %}
+                            <table>
+                                <thead><tr><th>Subject</th><th>Marks</th><th>Your %</th><th>Class %</th></tr></thead>
+                                <tbody>
+                                    {% for row in analytics.mid_term_summary %}
+                                        <tr>
+                                            <td>{{ row.subject }}</td>
+                                            <td>{{ row.marks_text }}</td>
+                                            <td>{% if row.percentage is not None %}{{ row.percentage }}%{% else %}-{% endif %}</td>
+                                            <td>{% if row.class_percentage is not None %}{{ row.class_percentage }}%{% else %}-{% endif %}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% elif performance_view == 'final_term' %}
+                            <table>
+                                <thead><tr><th>Subject</th><th>Marks</th><th>Your %</th><th>Class %</th></tr></thead>
+                                <tbody>
+                                    {% for row in analytics.final_term_summary %}
+                                        <tr>
+                                            <td>{{ row.subject }}</td>
+                                            <td>{{ row.marks_text }}</td>
+                                            <td>{% if row.percentage is not None %}{{ row.percentage }}%{% else %}-{% endif %}</td>
+                                            <td>{% if row.class_percentage is not None %}{{ row.class_percentage }}%{% else %}-{% endif %}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endif %}
+
+                        <h3 style="margin-top:24px;">Performance Trend Over Time</h3>
+                        <table>
+                            <thead><tr><th>Date</th><th>Exam</th><th>Percentage</th></tr></thead>
+                            <tbody>
+                                {% for point in analytics.exam_trend_points %}
+                                    <tr>
+                                        <td>{{ point.date }}</td>
+                                        <td>{{ point.label }}</td>
+                                        <td>{{ point.percentage }}%</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No academic results available yet.</p>
+                    {% endif %}
+                </div>
+            {% elif panel == 'digital_diary' %}
+                <div class="panel">
+                    <h2 style="margin-top:0;">Digital Diary</h2>
+                    <div class="section-toolbar">
+                        {% for subject_name in configured_subjects %}
+                            <a class="section-link {% if selected_diary_subject == subject_name %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=digital_diary&diary_subject={{ subject_name }}">{{ subject_name }}</a>
+                        {% endfor %}
+                    </div>
+                    {% if diary_entries %}
+                        {% for item in diary_entries %}
+                            <div class="list-item">
+                                <p><strong>{{ item.homework.subject }}</strong> | {{ item.homework.date }}</p>
+                                <p>{{ item.homework.description }}</p>
+                                <p class="subtle">Teacher: {{ item.homework.teacher.user.get_full_name|default:item.homework.teacher.user.username }}</p>
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="save_diary_feedback">
+                                    <input type="hidden" name="student_id" value="{{ student.id }}">
+                                    <input type="hidden" name="homework_id" value="{{ item.homework.id }}">
+                                    <input type="hidden" name="panel" value="digital_diary">
+                                    <input type="hidden" name="diary_subject" value="{{ selected_diary_subject }}">
+                                    <div class="status-row">
+                                        <label class="status-option"><input type="radio" name="status" value="done" {% if item.status == 'done' %}checked{% endif %}><span>Tick Done</span></label>
+                                        <label class="status-option"><input type="radio" name="status" value="not_done" {% if item.status == 'not_done' %}checked{% endif %}><span>Cross Not Done</span></label>
+                                        <label class="status-option"><input type="radio" name="status" value="pending" {% if item.status == 'pending' %}checked{% endif %}><span>Pending</span></label>
+                                    </div>
+                                    <label class="subtle" for="message_{{ item.homework.id }}">Message to teacher</label>
+                                    <textarea id="message_{{ item.homework.id }}" name="message" placeholder="Write your note for this diary entry.">{{ item.message }}</textarea>
+                                    <div class="subtle" style="margin:8px 0 12px;">
+                                        {% if item.updated_at %}
+                                            Last updated: {{ item.updated_at|date:"Y-m-d H:i" }}
+                                        {% else %}
+                                            No response sent yet.
+                                        {% endif %}
+                                    </div>
+                                    <div class="subtle" style="margin:0 0 12px;">
+                                        {% if item.message %}
+                                            {% if item.teacher_read %}
+                                                Teacher has read your message{% if item.teacher_read_at %} on {{ item.teacher_read_at|date:"Y-m-d H:i" }}{% endif %}.
+                                            {% else %}
+                                                Teacher has not read your message yet.
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    <button type="submit">Save Diary Response</button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No digital diary available for {{ selected_diary_subject }}.</p>
+                    {% endif %}
+                </div>
+            {% elif panel == 'timetable' %}
+                <div class="panel">
+                    <h2 style="margin-top:0;">Timetable</h2>
+                    <div class="assembly">Assembly Time: 7:30 am</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Lecture 1</th>
+                                <th>Lecture 2</th>
+                                <th>Lecture 3</th>
+                                <th>Lecture 4</th>
+                                <th>Lecture 5</th>
+                                <th>Lecture 6</th>
+                                <th>Lecture 7</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in timetable_rows %}
+                                <tr>
+                                    <td><strong>{{ row.day }}</strong></td>
+                                    {% for lecture in row.lectures %}
+                                        <td>{{ lecture }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% elif panel == 'fee' %}
+                <div class="panel">
+                    <h2 style="margin-top:0;">Fee</h2>
+                    <div class="fee-note {% if fee_summary.is_fee_alert %}alert{% endif %}">
+                        Submit fee before 7th of every month.
+                        {% if fee_summary.is_fee_alert %}
+                            Current month fee is still unpaid.
+                        {% endif %}
+                    </div>
+
+                    <div class="summary">
+                        <div class="card"><div class="label">Current Month</div><div class="value" style="font-size:22px;">{{ fee_summary.current_month_status }}</div></div>
+                    </div>
+
+                    {% if fee_records %}
+                        <table>
+                            <thead><tr><th>Month</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Paid Date</th><th>Receipt No.</th><th>Remarks</th></tr></thead>
+                            <tbody>
+                                {% for fee in fee_records %}
+                                    <tr>
+                                        <td>{{ fee.month_name }} {{ fee.year }}</td>
+                                        <td>{{ fee.amount }}</td>
+                                        <td>{{ fee.due_date }}</td>
+                                        <td class="fee-status-{{ fee.status }}">{{ fee.get_status_display }}</td>
+                                        <td>{{ fee.paid_date|default:"-" }}</td>
+                                        <td>{{ fee.receipt_number|default:"-" }}</td>
+                                        <td>{{ fee.remarks|default:"-" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No fee records available yet.</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+    </main>
+</div>
+</body>
+</html>

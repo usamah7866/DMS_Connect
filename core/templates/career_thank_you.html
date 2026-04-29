@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Career Application Submitted | Decent Model School</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(180deg, #eef5ff 0%, #f9fbff 55%, #edf4ff 100%);
+            color: #14213a;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+        }
+        .card {
+            width: min(760px, 100%);
+            background: rgba(255,255,255,0.92);
+            border-radius: 28px;
+            box-shadow: 0 24px 60px rgba(17, 36, 72, 0.14);
+            border: 1px solid rgba(255,255,255,0.8);
+            padding: 34px;
+        }
+        .eyebrow {
+            margin: 0 0 10px;
+            color: #ef5b3c;
+            font-size: 12px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+        h1 { margin: 0 0 14px; font-size: clamp(2rem, 5vw, 3.2rem); }
+        p { line-height: 1.75; color: #60708f; }
+        .status {
+            margin: 20px 0;
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: #edf5ff;
+            color: #143667;
+            font-weight: 600;
+        }
+        .actions {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        a {
+            text-decoration: none;
+            padding: 14px 20px;
+            border-radius: 999px;
+            font-weight: 800;
+        }
+        .primary {
+            background: linear-gradient(135deg, #143667, #1c4f8d);
+            color: white;
+        }
+        .secondary {
+            background: white;
+            color: #143667;
+            border: 1px solid rgba(20,54,103,0.14);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <p class="eyebrow">Career Application Submitted</p>
+        <h1>Your application has been received.</h1>
+        <p>Thank you for your interest in joining Decent Model School. The school can now review the submitted details and CV file.</p>
+        {% if career_status %}
+            <div class="status">{{ career_status }}</div>
+        {% endif %}
+        <div class="actions">
+            <a class="primary" href="/careers/">Submit Another Application</a>
+            <a class="secondary" href="/">Back to Portal</a>
+        </div>
+    </div>
+</body>
+</html>

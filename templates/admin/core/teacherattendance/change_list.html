@@ -1,0 +1,107 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dms-admin-empty-state dms-teacher-attendance-shell">
+    <div class="dms-teacher-attendance-head">
+        <div>
+            <p class="dms-admin-empty-tag">Teacher Attendance</p>
+            <h1>Mark teacher attendance by date.</h1>
+            <p>Select the month and day, then update attendance for every teacher from one page.</p>
+        </div>
+        <form method="get" class="dms-teacher-attendance-filters">
+            <label>
+                <span>Month</span>
+                <select name="month" onchange="this.form.submit()">
+                    {% for month_value, month_label in month_choices %}
+                        <option value="{{ month_value }}"{% if month_value == selected_month %} selected{% endif %}>{{ month_label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Day</span>
+                <select name="day" onchange="this.form.submit()">
+                    {% for day_value in day_choices %}
+                        <option value="{{ day_value }}"{% if day_value == selected_day %} selected{% endif %}>{{ day_value }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <input type="hidden" name="year" value="{{ selected_year }}">
+        </form>
+    </div>
+
+    <div class="dms-teacher-attendance-layout">
+        <section class="dms-teacher-calendar-card">
+            <div class="dms-teacher-calendar-head">
+                <h2>{{ month_name }} {{ selected_year }}</h2>
+                <p>Selected date: {{ selected_date|date:"d F Y" }}</p>
+            </div>
+            <div class="dms-teacher-calendar-grid">
+                {% for weekday in weekday_labels %}
+                    <div class="dms-teacher-calendar-weekday">{{ weekday }}</div>
+                {% endfor %}
+                {% for week in calendar_weeks %}
+                    {% for day in week %}
+                        {% if day.is_blank %}
+                            <div class="dms-teacher-calendar-cell is-blank"></div>
+                        {% else %}
+                            <a href="{{ day.url }}" class="dms-teacher-calendar-cell{% if day.is_selected %} is-selected{% endif %}">{{ day.number }}</a>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="dms-teacher-attendance-card">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="year" value="{{ selected_year }}">
+                <input type="hidden" name="month" value="{{ selected_month }}">
+                <input type="hidden" name="day" value="{{ selected_day }}">
+
+                <div class="dms-teacher-table-wrap">
+                    <table class="dms-teacher-attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Teacher</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in teacher_rows %}
+                                <tr>
+                                    <td>{{ row.teacher_name }}</td>
+                                    <td>
+                                        <select name="status_{{ row.teacher.pk }}">
+                                            {% for value, label in status_choices %}
+                                                <option value="{{ value }}"{% if value == row.status %} selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="remarks_{{ row.teacher.pk }}" value="{{ row.remarks }}" placeholder="Optional remarks">
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="3">No teachers are registered yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="submit-row">
+                    <input type="submit" name="_save_attendance" value="Save Teacher Attendance" class="default">
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
+{% endblock %}

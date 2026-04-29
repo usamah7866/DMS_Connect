@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}DMS Connect Admin{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div class="dms-admin-brand">
+    <img src="{% static 'core/images/logo.png' %}" alt="Decent Model School logo" class="dms-admin-brand-logo">
+    <div>
+        <div class="dms-admin-brand-eyebrow">Decent Model School</div>
+        <h1 id="site-name"><a href="{% url 'admin:index' %}">DMS Connect Admin</a></h1>
+    </div>
+</div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

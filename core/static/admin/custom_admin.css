@@ -1,0 +1,661 @@
+:root {
+    --dms-navy-900: #0d2446;
+    --dms-navy-800: #16325c;
+    --dms-navy-700: #1e3c72;
+    --dms-sky-100: #eef5ff;
+    --dms-sky-200: #dbe7ff;
+    --dms-paper: #f4f7fb;
+    --dms-card: #ffffff;
+    --dms-ink: #1f2937;
+    --dms-muted: #64748b;
+    --dms-accent: #ef5b3c;
+    --dms-border: #dbe5f1;
+    --dms-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+    --dms-radius: 18px;
+}
+
+body,
+body.login {
+    background:
+        radial-gradient(circle at top left, rgba(239, 184, 76, 0.12), transparent 28%),
+        radial-gradient(circle at 85% 8%, rgba(30, 60, 114, 0.12), transparent 24%),
+        linear-gradient(180deg, #eef5ff 0%, #f8fbff 55%, #edf4ff 100%);
+    color: var(--dms-ink);
+    font-family: "Segoe UI", sans-serif;
+}
+
+#header {
+    background: linear-gradient(180deg, var(--dms-navy-800), var(--dms-navy-700));
+    color: #fff;
+    box-shadow: var(--dms-shadow);
+}
+
+#header a:link,
+#header a:visited,
+#user-tools,
+#user-tools a {
+    color: #fff;
+}
+
+.dms-admin-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.dms-admin-brand-logo,
+.dms-admin-login-logo {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+    border-radius: 16px;
+    background: #fff;
+    padding: 6px;
+}
+
+.dms-admin-brand-eyebrow,
+.dms-admin-login-tag {
+    margin: 0 0 4px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+#site-name {
+    margin: 0;
+}
+
+#site-name a {
+    color: #fff;
+    font-weight: 800;
+}
+
+div.breadcrumbs {
+    background: rgba(22, 50, 92, 0.08);
+    color: var(--dms-navy-800);
+    border-bottom: 1px solid var(--dms-border);
+}
+
+div.breadcrumbs a {
+    color: var(--dms-navy-700);
+}
+
+#content {
+    padding: 24px;
+}
+
+.module,
+#changelist .module,
+.inline-group,
+.submit-row,
+.dashboard #content-main .module,
+.dashboard #content-related .module,
+.change-form #content-main .module,
+.app-list .app-auth,
+.app-list .app-core {
+    background: var(--dms-card);
+    border: 1px solid var(--dms-border);
+    border-radius: var(--dms-radius);
+    box-shadow: var(--dms-shadow);
+    overflow: hidden;
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+    background: linear-gradient(180deg, var(--dms-navy-800), var(--dms-navy-700));
+    color: #fff;
+    padding: 14px 18px;
+    font-weight: 700;
+}
+
+.dashboard .module table,
+#changelist table,
+.results,
+.aligned label,
+form .form-row,
+.submit-row,
+.selector,
+.selector-chosen,
+.selector-available {
+    background: transparent;
+}
+
+a:link,
+a:visited {
+    color: var(--dms-navy-700);
+}
+
+a:hover {
+    color: var(--dms-navy-900);
+}
+
+.button,
+input[type="submit"],
+input[type="button"],
+.submit-row input,
+button {
+    background: linear-gradient(180deg, var(--dms-navy-800), var(--dms-navy-700));
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-weight: 700;
+}
+
+.button.default,
+input[type="submit"].default,
+.submit-row input.default {
+    background: linear-gradient(180deg, #1d4ed8, #1e40af);
+}
+
+.button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+button:hover {
+    filter: brightness(0.97);
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="url"],
+input[type="tel"],
+input[type="date"],
+textarea,
+select {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    color: var(--dms-ink);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: 2px solid rgba(37, 99, 235, 0.18);
+    border-color: #93c5fd;
+}
+
+#nav-sidebar {
+    background: linear-gradient(180deg, var(--dms-navy-800), var(--dms-navy-700));
+    border-right: none;
+    padding: 18px 12px;
+}
+
+#nav-filter,
+#nav-sidebar .filter,
+label[for="nav-filter"] {
+    display: none !important;
+}
+
+#nav-sidebar caption {
+    display: none;
+}
+
+#nav-sidebar .current-app .section:link,
+#nav-sidebar .current-app .section:visited,
+#nav-sidebar a:link,
+#nav-sidebar a:visited {
+    color: #fff;
+}
+
+#nav-sidebar .current-model {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+}
+
+.dms-admin-nav-inner {
+    display: grid;
+    gap: 12px;
+}
+
+.dms-admin-nav-title {
+    padding: 8px 12px 0;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.dms-admin-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: stretch;
+    margin-bottom: 24px;
+    padding: 24px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(22, 50, 92, 0.98), rgba(30, 60, 114, 0.92));
+    box-shadow: var(--dms-shadow);
+    color: #fff;
+}
+
+.dms-admin-shell {
+    display: grid;
+    grid-template-columns: minmax(250px, 290px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.dms-admin-sidebar {
+    position: sticky;
+    top: 24px;
+    display: grid;
+    gap: 18px;
+}
+
+.dms-admin-sidebar-card {
+    background: linear-gradient(180deg, rgba(13, 36, 70, 0.98), rgba(30, 60, 114, 0.96));
+    color: #fff;
+    border-radius: 20px;
+    box-shadow: var(--dms-shadow);
+    padding: 22px;
+}
+
+.dms-admin-sidebar-card h2,
+.dms-admin-sidebar-card p {
+    margin: 0;
+}
+
+.dms-admin-sidebar-card h2 {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+}
+
+.dms-admin-sidebar-card p:last-child {
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.7;
+}
+
+.dms-admin-sidebar-tag {
+    margin: 0 0 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #fca58d;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.dms-admin-side-links {
+    display: grid;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid var(--dms-border);
+    border-radius: 20px;
+    box-shadow: var(--dms-shadow);
+    padding: 14px;
+}
+
+.dms-admin-side-links a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    background: #f8fbff;
+    color: var(--dms-navy-800);
+    border: 1px solid transparent;
+}
+
+.dms-admin-side-links a:hover {
+    border-color: rgba(30, 60, 114, 0.15);
+    background: #eef5ff;
+}
+
+#nav-sidebar .dms-admin-side-links {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+#nav-sidebar .dms-admin-side-links a {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border: none;
+}
+
+#nav-sidebar .dms-admin-side-links a:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+
+.dms-admin-main {
+    min-width: 0;
+}
+
+.dms-admin-hero h1 {
+    margin: 0 0 10px;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.04;
+}
+
+.dms-admin-hero p {
+    margin: 0;
+    max-width: 70ch;
+    color: rgba(255, 255, 255, 0.84);
+    line-height: 1.7;
+}
+
+.dms-admin-hero-tag {
+    margin: 0 0 8px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #fca58d;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.dms-admin-hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+    gap: 14px;
+    min-width: min(460px, 100%);
+}
+
+.dms-admin-stat {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.dms-admin-stat span {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.72);
+    margin-bottom: 8px;
+}
+
+.dms-admin-stat strong {
+    font-size: 20px;
+}
+
+.dms-admin-empty-state {
+    min-height: 420px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 42px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--dms-border);
+    border-radius: 26px;
+    box-shadow: var(--dms-shadow);
+}
+
+.dms-admin-empty-state h1 {
+    margin: 0 0 12px;
+    color: var(--dms-navy-900);
+    font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.dms-admin-empty-state p {
+    max-width: 70ch;
+    margin: 0 auto;
+    color: var(--dms-muted);
+    line-height: 1.75;
+}
+
+.dms-admin-empty-tag {
+    margin: 0 0 10px;
+    color: var(--dms-accent);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.dms-fee-month-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 260px;
+}
+
+.dms-fee-month-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 30px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #eef5ff;
+    color: var(--dms-navy-800) !important;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+}
+
+.dms-fee-month-link:hover {
+    background: #dbe7ff;
+}
+
+.dms-fee-month-link.is-current {
+    background: linear-gradient(180deg, var(--dms-navy-800), var(--dms-navy-700));
+    color: #fff !important;
+}
+
+.dms-teacher-attendance-shell {
+    display: block;
+    text-align: left;
+    min-height: 0;
+}
+
+.dms-teacher-attendance-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 24px;
+}
+
+.dms-teacher-attendance-head h1 {
+    margin: 0 0 10px;
+}
+
+.dms-teacher-attendance-head p {
+    margin: 0;
+}
+
+.dms-teacher-attendance-filters {
+    display: flex;
+    gap: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.dms-teacher-attendance-filters label {
+    display: grid;
+    gap: 6px;
+    min-width: 150px;
+    color: var(--dms-navy-900);
+    font-weight: 700;
+}
+
+.dms-teacher-attendance-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+    gap: 22px;
+}
+
+.dms-teacher-calendar-card,
+.dms-teacher-attendance-card {
+    background: #fff;
+    border: 1px solid var(--dms-border);
+    border-radius: 22px;
+    box-shadow: var(--dms-shadow);
+    padding: 22px;
+}
+
+.dms-teacher-calendar-head h2 {
+    margin: 0 0 8px;
+    color: var(--dms-navy-900);
+}
+
+.dms-teacher-calendar-head p {
+    margin: 0 0 18px;
+    color: var(--dms-muted);
+}
+
+.dms-teacher-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.dms-teacher-calendar-weekday {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--dms-muted);
+    text-transform: uppercase;
+}
+
+.dms-teacher-calendar-cell {
+    min-height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #f8fbff;
+    color: var(--dms-navy-800);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.dms-teacher-calendar-cell:hover {
+    background: #dbe7ff;
+}
+
+.dms-teacher-calendar-cell.is-selected {
+    background: linear-gradient(180deg, var(--dms-navy-800), var(--dms-navy-700));
+    color: #fff;
+}
+
+.dms-teacher-calendar-cell.is-blank {
+    background: transparent;
+}
+
+.dms-teacher-table-wrap {
+    overflow-x: auto;
+}
+
+.dms-teacher-attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dms-teacher-attendance-table th,
+.dms-teacher-attendance-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--dms-border);
+    vertical-align: middle;
+}
+
+.dms-teacher-attendance-table th {
+    color: var(--dms-navy-900);
+    text-align: left;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.dms-teacher-attendance-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dms-teacher-attendance-table input[type="text"] {
+    width: 100%;
+    min-width: 220px;
+}
+
+body.login #container {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+}
+
+body.login #header,
+body.login .breadcrumbs {
+    display: none;
+}
+
+body.login #content {
+    padding: 0;
+}
+
+.dms-admin-login-shell {
+    width: min(920px, calc(100vw - 32px));
+}
+
+.dms-admin-login-card {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.84);
+    border-radius: 28px;
+    box-shadow: var(--dms-shadow);
+    padding: 32px;
+}
+
+.dms-admin-login-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.dms-admin-login-head h1 {
+    margin: 0 0 6px;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    color: var(--dms-navy-900);
+}
+
+.dms-admin-login-head p:last-child {
+    margin: 0;
+    color: var(--dms-muted);
+    line-height: 1.7;
+}
+
+body.login #content-main {
+    width: 100%;
+}
+
+body.login .form-row,
+body.login .submit-row {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+@media (max-width: 1024px) {
+    .dms-admin-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .dms-admin-sidebar {
+        position: static;
+    }
+
+    .dms-admin-hero {
+        flex-direction: column;
+    }
+
+    .dms-admin-hero-stats {
+        grid-template-columns: 1fr;
+        min-width: 0;
+    }
+
+    .dms-teacher-attendance-head,
+    .dms-teacher-attendance-layout {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+}

@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dms-admin-empty-state">
+    <div>
+        <p class="dms-admin-empty-tag">Dashboard</p>
+        <h1>Admin dashboard is ready for your final layout.</h1>
+        <p>For now, the dashboard stays empty and the side menu is your main navigation for each separate admin page.</p>
+    </div>
+</div>
+{% endblock %}
