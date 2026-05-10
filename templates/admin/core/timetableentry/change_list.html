@@ -1,0 +1,83 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}?v=20260504-3">
+{% endblock %}
+
+{% block content %}
+<div class="dms-admin-empty-state dms-timetable-shell">
+    <div class="dms-timetable-head">
+        <div>
+            <p class="dms-admin-empty-tag">Timetable</p>
+            <h1>View class timetable in weekly format.</h1>
+            <p>Select a class to open its fixed weekly timetable in the same easy table view used in the student dashboard.</p>
+        </div>
+    </div>
+
+    <section class="dms-timetable-search-card">
+        <form method="get" class="dms-timetable-search-form">
+            <div class="dms-timetable-search-field">
+                <label for="timetable-class-filter">Class</label>
+                <select id="timetable-class-filter" name="class_name">
+                    <option value="">Select a class</option>
+                    {% for school_class in class_options %}
+                        <option value="{{ school_class.name }}"{% if school_class.name == selected_class %} selected{% endif %}>{{ school_class.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="dms-timetable-search-actions">
+                <button type="submit" class="button default">View Timetable</button>
+                <a href="{{ clear_url }}" class="button">Clear</a>
+                <a href="{{ add_url }}" class="button">Add Timetable Entry</a>
+            </div>
+        </form>
+    </section>
+
+    {% if selected_class %}
+        <section class="dms-timetable-board">
+            <div class="dms-timetable-board-head">
+                <div>
+                    <h2>{{ selected_class }} Timetable</h2>
+                    <p>{{ selected_entries_count }} timetable entr{{ selected_entries_count|pluralize:"y,ies" }} found for this class.</p>
+                </div>
+            </div>
+
+            <div class="dms-timetable-table-wrap">
+                <table class="dms-timetable-table">
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            {% for lecture_number in lecture_numbers %}
+                                <th>Lecture {{ lecture_number }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in timetable_rows %}
+                            <tr>
+                                <td><strong>{{ row.day }}</strong></td>
+                                {% for lecture in row.lectures %}
+                                    <td>
+                                        {% if lecture.has_entry %}
+                                            <a href="{{ lecture.change_url }}" class="dms-timetable-slot-link">{{ lecture.subject }}</a>
+                                        {% else %}
+                                            <a href="{{ lecture.add_url }}" class="dms-timetable-slot-link is-empty">Add</a>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% else %}
+        <div class="dms-fee-empty-state">
+            <strong>Select a class first.</strong>
+            <p>The timetable will appear here in weekly table form once you choose a class.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}?v=20260505-1">
+{% endblock %}
+
+{% block content %}
+<div class="dms-admin-empty-state dms-teacher-attendance-shell">
+    <div class="dms-teacher-attendance-head">
+        <div>
+            <p class="dms-admin-empty-tag">Staff Attendance Records</p>
+            <h1>Review saved staff attendance history.</h1>
+            <p>Search by teacher name and month to review entry time, exit time, and the final attendance status based on the current school timings.</p>
+        </div>
+    </div>
+
+    <section class="dms-timetable-search-card">
+        <form method="get" class="dms-timetable-search-form">
+            <div class="dms-timetable-search-field">
+                <label for="teacher_name">Teacher Name</label>
+                <input id="teacher_name" type="text" name="teacher_name" value="{{ teacher_query }}" placeholder="Search by teacher name or username">
+            </div>
+            <div class="dms-timetable-search-field">
+                <label for="month">Month</label>
+                <input id="month" type="month" name="month" value="{{ month_value }}">
+            </div>
+            <div class="dms-timetable-search-actions">
+                <button type="submit" class="button default">View Records</button>
+                <a href="{{ staff_records_clear_url }}" class="button">Clear</a>
+                <a href="{{ staff_records_export_url }}" class="button default">Export PDF</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="dms-teacher-attendance-card">
+        <div class="dms-teacher-table-wrap">
+            <table class="dms-teacher-attendance-table">
+                <thead>
+                    <tr>
+                        <th>Teacher</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Entry Time</th>
+                        <th>Exit Time</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in record_rows %}
+                        <tr>
+                            <td>{{ row.teacher_name }}</td>
+                            <td>{{ row.date|date:"d M Y" }}</td>
+                            <td>
+                                {% if row.status == 'Present' %}
+                                    <span class="status-present">Present</span>
+                                {% elif row.status == 'Late' %}
+                                    <span class="status-late">Late</span>
+                                {% elif row.status == 'Leave' %}
+                                    <span class="status-leave">Leave</span>
+                                {% else %}
+                                    <span class="status-absent">Absent</span>
+                                {% endif %}
+                            </td>
+                            <td>{% if row.entry_time %}{{ row.entry_time|time:"H:i" }}{% else %}<span class="subtle">-</span>{% endif %}</td>
+                            <td>{% if row.exit_time %}{{ row.exit_time|time:"H:i" }}{% else %}<span class="subtle">-</span>{% endif %}</td>
+                            <td>{% if row.remarks %}{{ row.remarks }}{% else %}<span class="subtle">-</span>{% endif %}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6">No staff attendance records match your current filters.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

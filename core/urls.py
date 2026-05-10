@@ -7,6 +7,7 @@ urlpatterns = [
     path('admissions/thank-you/', views.admission_thank_you_view, name='admission_thank_you'),
     path('careers/', views.careers_view, name='careers'),
     path('careers/thank-you/', views.career_thank_you_view, name='career_thank_you'),
+    path('attendance-desk/', views.attendance_desk, name='attendance_desk'),
     path('teacher/', views.teacher_dashboard, name='teacher_dashboard'),
     path('student/', views.student_dashboard, name='student_dashboard'),
     path('parent/', views.student_dashboard, name='legacy_parent_dashboard'),

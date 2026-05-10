@@ -9,10 +9,11 @@ from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg
+from django.db.models import Avg, Q
 from django.core.mail import EmailMessage
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.conf import settings
 
 import requests
@@ -36,10 +37,12 @@ from .models import (
     NotificationAudience,
     NotificationRead,
     SchoolClassSubject,
+    SchoolTimingSettings,
     Student,
     StudentFee,
     Teacher,
     TeacherAttendance,
+    TeacherYearlyRemark,
     TimetableEntry,
     Weekday,
 )
@@ -52,6 +55,113 @@ ADMISSION_EMAILS = {
     Campus.RUSTAM: "dmchool0077@gmail.com",
 }
 CAREER_EMAIL = "dmchool0077@gmail.com"
+ATTENDANCE_DESK_GROUP = "Attendance Desk"
+ID_CARD_CAMPUS_INFO = {
+    Campus.GIRLS: {
+        "phone": "042-37463067",
+        "email": "dmchool0077@gmail.com",
+        "address": "77-A, Nadeem Park, Gulshan Ravi, Lahore",
+    },
+    Campus.KIDS: {
+        "phone": "042-37417770",
+        "email": "dmchool0077@gmail.com",
+        "address": "500-A, Gulshan Ravi, Lahore",
+    },
+    Campus.RUSTAM: {
+        "phone": "042-37467772",
+        "email": "dmchool0077@gmail.com",
+        "address": "158, Rustam Park, Gulshan Ravi, Lahore",
+    },
+}
+
+
+def _teacher_day_status(entry_time, exit_time, late_after_time, leave_before_time, target_date=None):
+    if not entry_time and not exit_time:
+        if target_date and target_date > timezone.localdate():
+            return "unmarked"
+        return "absent"
+    if exit_time and exit_time < leave_before_time:
+        return "leave"
+    if entry_time and entry_time > late_after_time:
+        return "late"
+    return "present"
+
+
+def _is_attendance_desk_user(user):
+    return user.is_authenticated and user.groups.filter(name=ATTENDANCE_DESK_GROUP).exists()
+
+
+def _attendance_desk_context(request, selected_date):
+    timing_settings = SchoolTimingSettings.get_solo()
+    teachers = Teacher.objects.select_related("user").order_by(
+        "user__first_name", "user__last_name", "user__username"
+    )
+    existing_records = {
+        record.teacher_id: record
+        for record in TeacherAttendance.objects.filter(
+            teacher__in=teachers,
+            date=selected_date,
+        )
+    }
+
+    teacher_rows = []
+    for teacher in teachers:
+        record = existing_records.get(teacher.pk)
+        teacher_rows.append(
+            {
+                "teacher": teacher,
+                "teacher_name": teacher.user.get_full_name().strip() or teacher.user.username,
+                "entry_time": record.entry_time.strftime("%H:%M") if record and record.entry_time else "",
+                "exit_time": record.exit_time.strftime("%H:%M") if record and record.exit_time else "",
+                "can_mark_entry": not bool(record and record.entry_time),
+                "can_mark_exit": bool(record and record.entry_time and not record.exit_time),
+            }
+        )
+
+    month_calendar = calendar.Calendar(firstweekday=0).monthdayscalendar(
+        selected_date.year, selected_date.month
+    )
+    calendar_weeks = []
+    for week in month_calendar:
+        week_days = []
+        for day_number in week:
+            week_days.append(
+                {
+                    "number": day_number,
+                    "is_blank": day_number == 0,
+                    "is_selected": day_number == selected_date.day,
+                    "url": (
+                        f"{request.path}?year={selected_date.year}&month={selected_date.month}&day={day_number}"
+                        if day_number
+                        else ""
+                    ),
+                }
+            )
+        calendar_weeks.append(week_days)
+
+    if selected_date.month == 1:
+        previous_month_year = selected_date.year - 1
+        previous_month = 12
+    else:
+        previous_month_year = selected_date.year
+        previous_month = selected_date.month - 1
+    if selected_date.month == 12:
+        next_month_year = selected_date.year + 1
+        next_month = 1
+    else:
+        next_month_year = selected_date.year
+        next_month = selected_date.month + 1
+
+    return {
+        "selected_date": selected_date,
+        "month_name": calendar.month_name[selected_date.month],
+        "teacher_rows": teacher_rows,
+        "calendar_weeks": calendar_weeks,
+        "weekday_labels": list(calendar.day_abbr),
+        "previous_month_url": f"{request.path}?year={previous_month_year}&month={previous_month}&day=1",
+        "next_month_url": f"{request.path}?year={next_month_year}&month={next_month}&day=1",
+        "school_timing_settings": timing_settings,
+    }
 
 
 def _teacher_class_context(teacher, selected_class_name=None, selected_subject=None):
@@ -77,11 +187,23 @@ def _teacher_class_context(teacher, selected_class_name=None, selected_subject=N
     return class_subjects, selected_class
 
 
-def _notifications_for(audience):
-    return Notification.objects.filter(
-        is_active=True,
-        audience__in=[audience, NotificationAudience.BOTH],
-    )[:5]
+def _notifications_for(user, student=None):
+    notifications = Notification.objects.filter(is_active=True)
+
+    if student is not None:
+        notifications = notifications.filter(
+            Q(audience=NotificationAudience.ALL)
+            | Q(audience=NotificationAudience.STUDENTS)
+            | Q(audience=NotificationAudience.CLASS_WISE, target_classes__name=student.class_name)
+        )
+    elif Teacher.objects.filter(user=user).exists():
+        notifications = notifications.filter(
+            audience__in=[NotificationAudience.ALL, NotificationAudience.STAFF]
+        )
+    else:
+        notifications = notifications.filter(audience=NotificationAudience.ALL)
+
+    return notifications.distinct()[:5]
 
 
 def _performance_band(percentage):
@@ -114,113 +236,18 @@ def _attach_notification_state(notifications, user):
     return notifications
 
 
+def _student_id_number(student):
+    class_code = "".join(character for character in student.class_name if character.isalnum()).upper()[:6]
+    return f"DMS-{class_code}-{int(student.roll_number):03d}"
+
+
 def _pdf_escape(value):
     return str(value).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
 def _styled_pdf_response(page_streams, filename, logo_path=None):
-    page_count = len(page_streams)
-    font_object_numbers = {
-        "F1": 3 + page_count,
-        "F2": 4 + page_count,
-    }
-    image_object_number = 5 + page_count
-    smask_object_number = image_object_number + 1 if logo_path else None
-    first_stream_object_number = image_object_number + (2 if logo_path else 0)
-
-    objects = [
-        b"<< /Type /Catalog /Pages 2 0 R >>",
-        (
-            "<< /Type /Pages /Count "
-            f"{page_count} /Kids "
-            + "["
-            + " ".join(f"{3 + index} 0 R" for index in range(page_count))
-            + "] >>"
-        ).encode("ascii"),
-    ]
-
-    for index in range(page_count):
-        stream_object_number = first_stream_object_number + index
-        xobject_resource = ""
-        if logo_path:
-            xobject_resource = f" /XObject << /Im1 {image_object_number} 0 R >>"
-        objects.append(
-            (
-                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
-                f"/Resources << /Font << /F1 {font_object_numbers['F1']} 0 R /F2 {font_object_numbers['F2']} 0 R >>{xobject_resource} >> "
-                f"/Contents {stream_object_number} 0 R >>"
-            ).encode("ascii")
-        )
-
-    objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-    objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
-
-    if logo_path:
-        logo = _png_image_data(logo_path)
-        image_dictionary = (
-            f"<< /Type /XObject /Subtype /Image /Width {logo['width']} /Height {logo['height']} "
-            "/ColorSpace /DeviceRGB /BitsPerComponent 8 "
-            "/Filter /FlateDecode "
-            f"/DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns {logo['width']} >> "
-        )
-        if logo["alpha_data"]:
-            image_dictionary += f"/SMask {smask_object_number} 0 R "
-        image_dictionary += f"/Length {len(logo['rgb_data'])} >>"
-        objects.append(
-            image_dictionary.encode("ascii")
-            + b"\nstream\n"
-            + logo["rgb_data"]
-            + b"\nendstream"
-        )
-
-        if logo["alpha_data"]:
-            smask_dictionary = (
-                f"<< /Type /XObject /Subtype /Image /Width {logo['width']} /Height {logo['height']} "
-                "/ColorSpace /DeviceGray /BitsPerComponent 8 "
-                "/Filter /FlateDecode "
-                f"/DecodeParms << /Predictor 15 /Colors 1 /BitsPerComponent 8 /Columns {logo['width']} >> "
-                f"/Length {len(logo['alpha_data'])} >>"
-            )
-            objects.append(
-                smask_dictionary.encode("ascii")
-                + b"\nstream\n"
-                + logo["alpha_data"]
-                + b"\nendstream"
-            )
-
-    for stream_text in page_streams:
-        stream_data = stream_text.encode("latin-1", errors="replace")
-        objects.append(
-            b"<< /Length "
-            + str(len(stream_data)).encode("ascii")
-            + b" >>\nstream\n"
-            + stream_data
-            + b"\nendstream"
-        )
-
-    pdf = bytearray(b"%PDF-1.4\n")
-    offsets = [0]
-    for index, body in enumerate(objects, start=1):
-        offsets.append(len(pdf))
-        pdf.extend(f"{index} 0 obj\n".encode("ascii"))
-        pdf.extend(body)
-        pdf.extend(b"\nendobj\n")
-
-    xref_offset = len(pdf)
-    pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
-    pdf.extend(b"0000000000 65535 f \n")
-    for offset in offsets[1:]:
-        pdf.extend(f"{offset:010} 00000 n \n".encode("ascii"))
-    pdf.extend(
-        (
-            f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
-            f"startxref\n{xref_offset}\n%%EOF"
-        ).encode("ascii")
-    )
-
-    response = HttpResponse(bytes(pdf), content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    return response
+    image_map = {"Im1": str(logo_path)} if logo_path else None
+    return _pdf_response_with_images(page_streams, filename, image_map=image_map)
 
 
 def _pdf_text(x, y, text, size=10, font="F1", color=(0, 0, 0)):
@@ -232,6 +259,12 @@ def _pdf_text(x, y, text, size=10, font="F1", color=(0, 0, 0)):
         f"1 0 0 1 {x} {y} Tm "
         f"({_pdf_escape(text)}) Tj ET"
     )
+
+
+def _pdf_text_centered(x_center, y, text, size=10, font="F1", color=(0, 0, 0), width_factor=0.48):
+    text = str(text)
+    estimated_width = len(text) * size * width_factor
+    return _pdf_text(x_center - (estimated_width / 2), y, text, size=size, font=font, color=color)
 
 
 def _pdf_rect(x, y, width, height, fill_color=None, stroke_color=None, line_width=1):
@@ -346,6 +379,465 @@ def _png_image_data(image_path):
         "rgb_data": zlib.compress(bytes(rgb_stream)),
         "alpha_data": zlib.compress(bytes(alpha_stream)) if color_type == 6 else None,
     }
+
+
+def _jpeg_image_data(image_path):
+    data = Path(image_path).read_bytes()
+    if not data.startswith(b"\xff\xd8"):
+        raise ValueError("Only JPEG images are supported")
+
+    position = 2
+    width = height = None
+    color_components = 3
+    while position < len(data):
+        if data[position] != 0xFF:
+            position += 1
+            continue
+        marker = data[position + 1]
+        position += 2
+        if marker in (0xD8, 0xD9):
+            continue
+        if marker == 0xDA:
+            break
+        segment_length = struct.unpack(">H", data[position : position + 2])[0]
+        segment_data = data[position + 2 : position + segment_length]
+        if marker in (0xC0, 0xC1, 0xC2):
+            height = struct.unpack(">H", segment_data[1:3])[0]
+            width = struct.unpack(">H", segment_data[3:5])[0]
+            color_components = segment_data[5]
+            break
+        position += segment_length
+
+    if not width or not height:
+        raise ValueError("Unsupported JPEG image")
+
+    return {
+        "width": width,
+        "height": height,
+        "jpeg_data": data,
+        "color_space": "/DeviceGray" if color_components == 1 else "/DeviceRGB",
+    }
+
+
+def _pdf_image_resource(image_path):
+    suffix = Path(image_path).suffix.lower()
+    if suffix == ".png":
+        data = _png_image_data(image_path)
+        return {
+            "type": "png",
+            "width": data["width"],
+            "height": data["height"],
+            "rgb_data": data["rgb_data"],
+            "alpha_data": data["alpha_data"],
+        }
+    if suffix in {".jpg", ".jpeg"}:
+        data = _jpeg_image_data(image_path)
+        return {
+            "type": "jpeg",
+            "width": data["width"],
+            "height": data["height"],
+            "jpeg_data": data["jpeg_data"],
+            "color_space": data["color_space"],
+        }
+    raise ValueError("Unsupported image format")
+
+
+def _pdf_response_with_images(page_streams, filename, image_map=None):
+    page_count = len(page_streams)
+    font_object_numbers = {
+        "F1": 3 + page_count,
+        "F2": 4 + page_count,
+    }
+    image_map = image_map or {}
+    image_names = list(image_map.keys())
+    image_resources = []
+    image_object_numbers = {}
+    next_object_number = 5 + page_count
+
+    for image_name in image_names:
+        resource = _pdf_image_resource(image_map[image_name])
+        image_object_numbers[image_name] = next_object_number
+        next_object_number += 1
+        if resource["type"] == "png" and resource["alpha_data"]:
+            resource["smask_object_number"] = next_object_number
+            next_object_number += 1
+        image_resources.append((image_name, resource))
+
+    first_stream_object_number = next_object_number
+
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        (
+            "<< /Type /Pages /Count "
+            f"{page_count} /Kids "
+            + "["
+            + " ".join(f"{3 + index} 0 R" for index in range(page_count))
+            + "] >>"
+        ).encode("ascii"),
+    ]
+
+    for index in range(page_count):
+        stream_object_number = first_stream_object_number + index
+        xobject_resource = ""
+        if image_resources:
+            xobject_resource = " /XObject << " + " ".join(
+                f"/{image_name} {image_object_numbers[image_name]} 0 R"
+                for image_name, _ in image_resources
+            ) + " >>"
+        objects.append(
+            (
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+                f"/Resources << /Font << /F1 {font_object_numbers['F1']} 0 R /F2 {font_object_numbers['F2']} 0 R >>{xobject_resource} >> "
+                f"/Contents {stream_object_number} 0 R >>"
+            ).encode("ascii")
+        )
+
+    objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
+
+    for image_name, resource in image_resources:
+        if resource["type"] == "png":
+            image_dictionary = (
+                f"<< /Type /XObject /Subtype /Image /Width {resource['width']} /Height {resource['height']} "
+                "/ColorSpace /DeviceRGB /BitsPerComponent 8 "
+                "/Filter /FlateDecode "
+                f"/DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns {resource['width']} >> "
+            )
+            if resource["alpha_data"]:
+                image_dictionary += f"/SMask {resource['smask_object_number']} 0 R "
+            image_dictionary += f"/Length {len(resource['rgb_data'])} >>"
+            objects.append(
+                image_dictionary.encode("ascii")
+                + b"\nstream\n"
+                + resource["rgb_data"]
+                + b"\nendstream"
+            )
+            if resource["alpha_data"]:
+                smask_dictionary = (
+                    f"<< /Type /XObject /Subtype /Image /Width {resource['width']} /Height {resource['height']} "
+                    "/ColorSpace /DeviceGray /BitsPerComponent 8 "
+                    "/Filter /FlateDecode "
+                    f"/DecodeParms << /Predictor 15 /Colors 1 /BitsPerComponent 8 /Columns {resource['width']} >> "
+                    f"/Length {len(resource['alpha_data'])} >>"
+                )
+                objects.append(
+                    smask_dictionary.encode("ascii")
+                    + b"\nstream\n"
+                    + resource["alpha_data"]
+                    + b"\nendstream"
+                )
+        else:
+            image_dictionary = (
+                f"<< /Type /XObject /Subtype /Image /Width {resource['width']} /Height {resource['height']} "
+                f"/ColorSpace {resource['color_space']} /BitsPerComponent 8 "
+                "/Filter /DCTDecode "
+                f"/Length {len(resource['jpeg_data'])} >>"
+            )
+            objects.append(
+                image_dictionary.encode("ascii")
+                + b"\nstream\n"
+                + resource["jpeg_data"]
+                + b"\nendstream"
+            )
+
+    for stream_text in page_streams:
+        stream_data = stream_text.encode("latin-1", errors="replace")
+        objects.append(
+            b"<< /Length "
+            + str(len(stream_data)).encode("ascii")
+            + b" >>\nstream\n"
+            + stream_data
+            + b"\nendstream"
+        )
+
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for index, body in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{index} 0 obj\n".encode("ascii"))
+        pdf.extend(body)
+        pdf.extend(b"\nendobj\n")
+
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        (
+            f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF"
+        ).encode("ascii")
+    )
+
+    response = HttpResponse(bytes(pdf), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+def _pdf_polygon(points, fill_color):
+    red, green, blue = fill_color
+    if not points:
+        return ""
+    start_x, start_y = points[0]
+    commands = [f"{red:.3f} {green:.3f} {blue:.3f} rg", f"{start_x} {start_y} m"]
+    for x_value, y_value in points[1:]:
+        commands.append(f"{x_value} {y_value} l")
+    commands.append("h f")
+    return " ".join(commands)
+
+
+def _pdf_line(x1, y1, x2, y2, color=(0, 0, 0), line_width=1):
+    red, green, blue = color
+    return (
+        f"{line_width} w "
+        f"{red:.3f} {green:.3f} {blue:.3f} RG "
+        f"{x1} {y1} m {x2} {y2} l S"
+    )
+
+
+def _pdf_image(name, x, y, width, height):
+    return f"q {width} 0 0 {height} {x} {y} cm /{name} Do Q"
+
+
+def _pdf_barcode(x, y, width, height, seed_text):
+    commands = []
+    encoded = "".join(str(ord(character) % 10) for character in seed_text) or "1234567890"
+    bar_width = max(width / max(len(encoded) * 3, 1), 1.2)
+    cursor = x
+    for index, digit in enumerate(encoded):
+        if index % 2 == 0:
+            commands.append(_pdf_rect(cursor, y, bar_width, height, fill_color=(0.17, 0.17, 0.17)))
+        cursor += bar_width
+        if int(digit) % 2 == 0:
+            commands.append(_pdf_rect(cursor, y, bar_width * 0.6, height * 0.86, fill_color=(0.26, 0.26, 0.26)))
+        cursor += bar_width * 0.9
+        if cursor >= x + width:
+            break
+    return " ".join(commands)
+
+
+def _id_card_pdf(student):
+    front_template_path = BASE_DIR / "core" / "static" / "core" / "images" / "student-id-front.png"
+    back_template_path = BASE_DIR / "core" / "static" / "core" / "images" / "student-id-back.png"
+    image_map = {
+        "FrontTemplate": str(front_template_path),
+        "BackTemplate": str(back_template_path),
+    }
+    if student.student_photo and Path(student.student_photo.path).exists():
+        image_map["Photo"] = student.student_photo.path
+
+    card_x = 150
+    card_y = 120
+    card_width = 340
+    card_height = 530
+
+    front_commands = [
+        _pdf_image("FrontTemplate", card_x, card_y, card_width, card_height),
+    ]
+    back_commands = [
+        _pdf_image("BackTemplate", card_x, card_y, card_width, card_height),
+    ]
+
+    scale_x = card_width / 290
+    scale_y = card_height / 452
+
+    photo_image_x = card_x + (101 * scale_x)
+    photo_image_y = card_y + (452 - (95 + 10 + 105)) * scale_y
+    photo_image_width = 100 * scale_x
+    photo_image_height = 105 * scale_y
+
+    if "Photo" in image_map:
+        front_commands.append(_pdf_image("Photo", photo_image_x, photo_image_y, photo_image_width, photo_image_height))
+    else:
+        front_commands.append(
+            _pdf_rect(
+                photo_image_x,
+                photo_image_y,
+                photo_image_width,
+                photo_image_height,
+                fill_color=(0.94, 0.95, 0.97),
+                stroke_color=(0.85, 0.88, 0.93),
+            )
+        )
+        front_commands.append(
+            _pdf_text_centered(
+                card_x + (151 * scale_x),
+                photo_image_y + (photo_image_height / 2) - 4,
+                "PHOTO",
+                size=9,
+                font="F2",
+                color=(0.48, 0.53, 0.60),
+            )
+        )
+
+    student_name = student.name
+    if len(student_name) > 23:
+        student_name = student_name[:20] + "..."
+    name_y = card_y + (452 - 240 - 18) * scale_y
+    subtitle_y = name_y - (18 * scale_y)
+    front_commands.append(
+        _pdf_text_centered(
+            card_x + (card_width / 2),
+            name_y,
+            student_name,
+            size=15.5,
+            font="F2",
+            color=(0.04, 0.26, 0.37),
+            width_factor=0.43,
+        )
+    )
+    front_commands.append(
+        _pdf_text_centered(
+            card_x + (card_width / 2),
+            subtitle_y,
+            f"Class {student.class_name}",
+            size=10.5,
+            color=(0.04, 0.26, 0.37),
+            width_factor=0.43,
+        )
+    )
+    detail_start_y = card_y + (452 - 240 - 42) * scale_y
+    detail_y = detail_start_y
+    detail_rows = [
+        ("Roll No", str(student.roll_number)),
+        ("Campus", student.campus),
+        ("Father", student.father_name),
+        ("DOB", student.date_of_birth.strftime("%d/%m/%Y") if student.date_of_birth else "-"),
+        ("Valid till", student.id_card_valid_until.strftime("%d/%m/%Y") if student.id_card_valid_until else "-"),
+    ]
+    for label, value in detail_rows:
+        value_text = str(value)
+        if len(value_text) > 24:
+            value_text = value_text[:21] + "..."
+        front_commands.append(
+            _pdf_text(card_x + (35 * scale_x), detail_y, label, size=8.7, font="F2", color=(0.04, 0.26, 0.37))
+        )
+        front_commands.append(
+            _pdf_text(card_x + (93 * scale_x), detail_y, ":", size=8.7, font="F2", color=(0.04, 0.26, 0.37))
+        )
+        front_commands.append(
+            _pdf_text(card_x + (104 * scale_x), detail_y, value_text, size=8.7, color=(0.04, 0.26, 0.37))
+        )
+        detail_y -= (15 * scale_y)
+
+    return _pdf_response_with_images(
+        ["\n".join(front_commands), "\n".join(back_commands)],
+        f"{student.name.replace(' ', '_').lower()}_id_card.pdf",
+        image_map=image_map,
+    )
+
+
+def _student_fee_tracker_pdf(student, fee_records, fee_summary):
+    logo_path = BASE_DIR / "core" / "static" / "core" / "images" / "logo.png"
+    commands = []
+
+    commands.append(_pdf_rect(0, 760, 595, 82, fill_color=(0.09, 0.24, 0.45)))
+    commands.append("q 42 0 0 34 34 782 cm /Im1 Do Q")
+    commands.append(_pdf_text(92, 812, "DECENT MODEL SCHOOL", size=20, font="F2", color=(1, 1, 1)))
+    commands.append(_pdf_text(92, 794, "Student Fee Tracking Report", size=11, color=(0.93, 0.96, 1)))
+    commands.append(_pdf_text(92, 779, "Affiliated with B.I.S.E | Established since 1980", size=9, color=(0.93, 0.96, 1)))
+
+    commands.append(_pdf_rect(34, 716, 527, 34, fill_color=(0.91, 0.95, 1)))
+    commands.append(_pdf_text(42, 735, f"Student Name: {student.name}", size=11, font="F2"))
+    commands.append(_pdf_text(42, 720, f"Class: {student.class_name}", size=10))
+    commands.append(_pdf_text(220, 720, f"Roll Number: {student.roll_number}", size=10))
+    commands.append(_pdf_text(382, 720, f"Campus: {student.campus}", size=10))
+
+    summary_y = 674
+    summary_cards = [
+        ("Current Month", fee_summary["current_month_name"]),
+        ("Status", str(fee_summary["current_month_status"])),
+        ("Monthly Fee", str(fee_summary["current_month_amount"])),
+        ("Paid This Month", str(fee_summary["current_month_paid"])),
+        ("Balance", str(fee_summary["current_month_balance"])),
+    ]
+    card_x = 34
+    for label, value in summary_cards:
+        commands.append(_pdf_rect(card_x, summary_y, 98, 44, fill_color=(1, 1, 1), stroke_color=(0.82, 0.87, 0.94)))
+        commands.append(_pdf_text(card_x + 8, summary_y + 27, label, size=8.5, font="F2", color=(0.34, 0.41, 0.53)))
+        commands.append(_pdf_text(card_x + 8, summary_y + 11, value[:16], size=10.5, color=(0.09, 0.24, 0.45)))
+        card_x += 106
+
+    note_color = (0.60, 0.11, 0.11) if fee_summary["is_fee_alert"] else (0.09, 0.24, 0.45)
+    note_fill = (0.99, 0.89, 0.89) if fee_summary["is_fee_alert"] else (0.93, 0.96, 1.0)
+    commands.append(_pdf_rect(34, 610, 527, 38, fill_color=note_fill, stroke_color=(0.82, 0.87, 0.94)))
+    commands.append(_pdf_text(42, 632, "Submit fee before 7th of every month.", size=10.5, font="F2", color=note_color))
+    if fee_summary["is_fee_alert"]:
+        commands.append(_pdf_text(42, 616, "Current month fee is still unpaid.", size=10, color=note_color))
+
+    columns = [
+        ("Month", 96),
+        ("Amount", 60),
+        ("Paid", 60),
+        ("Balance", 60),
+        ("Due Date", 72),
+        ("Status", 58),
+        ("Paid Date", 72),
+        ("Receipt", 60),
+        ("Remarks", 49),
+    ]
+    x_positions = [34]
+    for _, width in columns[:-1]:
+        x_positions.append(x_positions[-1] + width)
+
+    table_y = 574
+    for index, (title, width) in enumerate(columns):
+        commands.append(
+            _pdf_rect(
+                x_positions[index],
+                table_y,
+                width,
+                24,
+                fill_color=(0.16, 0.38, 0.63),
+                stroke_color=(0.12, 0.31, 0.52),
+            )
+        )
+        commands.append(_pdf_text(x_positions[index] + 4, table_y + 8, title, size=8.5, font="F2", color=(1, 1, 1)))
+
+    row_y = table_y - 24
+    max_rows_first_page = 18
+    visible_records = fee_records[:max_rows_first_page]
+    for row_index, fee in enumerate(visible_records):
+        fill = (1, 1, 1) if row_index % 2 == 0 else (0.97, 0.98, 1)
+        values = [
+            f"{fee.month_name} {fee.year}",
+            str(fee.amount),
+            str(fee.paid_amount),
+            str(fee.balance_amount),
+            str(fee.due_date),
+            fee.get_status_display(),
+            str(fee.paid_date or "-"),
+            fee.receipt_number or "-",
+            fee.remarks or "-",
+        ]
+        for index, value in enumerate(values):
+            width = columns[index][1]
+            commands.append(
+                _pdf_rect(
+                    x_positions[index],
+                    row_y,
+                    width,
+                    22,
+                    fill_color=fill,
+                    stroke_color=(0.87, 0.91, 0.95),
+                )
+            )
+            commands.append(_pdf_text(x_positions[index] + 4, row_y + 7, value[:18], size=8, color=(0.12, 0.18, 0.28)))
+        row_y -= 22
+
+    if len(fee_records) > max_rows_first_page:
+        commands.append(_pdf_text(34, 126, "More fee rows exist in the dashboard than fit on one PDF page.", size=9, color=(0.60, 0.11, 0.11)))
+
+    commands.append(_pdf_text(34, 96, f"Total Paid: {fee_summary['total_paid']}", size=10.5, font="F2", color=(0.09, 0.24, 0.45)))
+    commands.append(_pdf_text(204, 96, f"Total Unpaid: {fee_summary['total_unpaid']}", size=10.5, font="F2", color=(0.09, 0.24, 0.45)))
+    commands.append(_pdf_text(34, 74, "This report reflects the same student fee data shown in the portal fee section.", size=9, color=(0.38, 0.45, 0.56)))
+
+    return _styled_pdf_response(
+        ["\n".join(commands)],
+        f"{student.name.replace(' ', '_').lower()}_fee_tracking.pdf",
+        logo_path=logo_path,
+    )
 
 
 def _exam_term(exam_title):
@@ -551,9 +1043,22 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-            if hasattr(user, "teacher"):
+            if _is_attendance_desk_user(user):
+                return redirect("attendance_desk")
+            if user.is_superuser or user.is_staff:
+                return redirect("/admin/")
+            if Teacher.objects.filter(user=user).exists():
                 return redirect("teacher_dashboard")
-            return redirect("student_dashboard")
+            if Student.objects.filter(user_account=user).exists():
+                return redirect("student_dashboard")
+            logout(request)
+            return render(
+                request,
+                "login.html",
+                {"error": "This account is not linked to a teacher or student profile yet."},
+            )
+
+        return render(request, "login.html", {"error": "Invalid username or password."})
 
     return render(request, "login.html")
 
@@ -561,6 +1066,63 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect("login")
+
+
+@login_required
+def attendance_desk(request):
+    if not _is_attendance_desk_user(request.user):
+        if request.user.is_superuser or request.user.is_staff:
+            return redirect("/admin/")
+        if Teacher.objects.filter(user=request.user).exists():
+            return redirect("teacher_dashboard")
+        if Student.objects.filter(user_account=request.user).exists():
+            return redirect("student_dashboard")
+        return redirect("login")
+
+    today = timezone.localdate()
+    selected_year = int(request.GET.get("year", request.POST.get("year", today.year)))
+    selected_month = int(request.GET.get("month", request.POST.get("month", today.month)))
+    max_days = calendar.monthrange(selected_year, selected_month)[1]
+    selected_day = int(request.GET.get("day", request.POST.get("day", min(today.day, max_days))))
+    selected_day = min(max(selected_day, 1), max_days)
+    selected_date = date(selected_year, selected_month, selected_day)
+    now_time = timezone.localtime().time().replace(second=0, microsecond=0)
+
+    if request.method == "POST":
+        teacher_id = request.POST.get("teacher_id")
+        action_name = request.POST.get("attendance_action")
+        target_teacher = Teacher.objects.select_related("user").filter(pk=teacher_id).first()
+        if target_teacher and action_name in {"mark_entry", "mark_exit"}:
+            attendance_record, _ = TeacherAttendance.objects.get_or_create(
+                teacher=target_teacher,
+                date=selected_date,
+                defaults={"status": "present"},
+            )
+            teacher_name = target_teacher.user.get_full_name() or target_teacher.user.username
+            if action_name == "mark_entry":
+                if attendance_record.entry_time:
+                    messages.info(request, f"Entry time is already marked for {teacher_name}.")
+                else:
+                    attendance_record.entry_time = now_time
+                    attendance_record.status = "present"
+                    attendance_record.save()
+                    messages.success(request, f"Entry time marked for {teacher_name}.")
+            else:
+                if not attendance_record.entry_time:
+                    messages.error(request, f"Mark entry first for {teacher_name}.")
+                elif attendance_record.exit_time:
+                    messages.info(request, f"Exit time is already marked for {teacher_name}.")
+                else:
+                    attendance_record.exit_time = now_time
+                    attendance_record.status = "present"
+                    attendance_record.save()
+                    messages.success(request, f"Exit time marked for {teacher_name}.")
+        return redirect(
+            f"{reverse('attendance_desk')}?year={selected_year}&month={selected_month}&day={selected_day}"
+        )
+
+    context = _attendance_desk_context(request, selected_date)
+    return render(request, "attendance_desk.html", context)
 
 
 def admissions_view(request):
@@ -739,6 +1301,8 @@ def career_thank_you_view(request):
 
 @login_required
 def teacher_dashboard(request):
+    if _is_attendance_desk_user(request.user):
+        return redirect("attendance_desk")
     teacher = Teacher.objects.get(user=request.user)
     selected_class_name = request.GET.get("class_name")
     selected_subject = request.GET.get("subject")
@@ -748,6 +1312,7 @@ def teacher_dashboard(request):
     today_local = timezone.localdate()
     selected_teacher_year = int(request.GET.get("teacher_year", today_local.year))
     selected_teacher_month = int(request.GET.get("teacher_month", today_local.month))
+    selected_remark_year = int(request.GET.get("remark_year", today_local.year))
     class_subjects, selected_class = _teacher_class_context(
         teacher, selected_class_name, selected_subject
     )
@@ -874,6 +1439,32 @@ def teacher_dashboard(request):
             selected_exam_id = exam.id
             messages.success(request, "Exam results saved successfully.")
 
+        elif action == "save_yearly_remarks":
+            target_year = int(request.POST.get("remark_year", selected_remark_year))
+            students = Student.objects.filter(class_name=selected_class_name)
+            for student in students:
+                behavior_marks_raw = request.POST.get(f"behavior_marks_{student.id}", "").strip()
+                participation_marks_raw = request.POST.get(f"participation_marks_{student.id}", "").strip()
+                remarks_text = request.POST.get(f"remarks_{student.id}", "").strip()
+
+                behavior_marks = max(0, min(10, int(behavior_marks_raw or "0")))
+                participation_marks = max(0, min(10, int(participation_marks_raw or "0")))
+
+                TeacherYearlyRemark.objects.update_or_create(
+                    teacher=teacher,
+                    student=student,
+                    class_name=selected_class_name,
+                    subject=selected_subject,
+                    academic_year=target_year,
+                    defaults={
+                        "behavior_marks": behavior_marks,
+                        "participation_marks": participation_marks,
+                        "remarks": remarks_text,
+                    },
+                )
+            selected_remark_year = target_year
+            messages.success(request, "Yearly teacher remarks saved successfully.")
+
         redirect_url = (
             f"{request.path}?panel={panel}"
         )
@@ -885,6 +1476,8 @@ def teacher_dashboard(request):
             redirect_url += f"&attendance_date={attendance_date_query}"
         if panel == "teacher_attendance":
             redirect_url += f"&teacher_year={selected_teacher_year}&teacher_month={selected_teacher_month}"
+        if panel == "remarks":
+            redirect_url += f"&remark_year={selected_remark_year}"
         return redirect(redirect_url)
 
     students = (
@@ -1011,7 +1604,42 @@ def teacher_dashboard(request):
             }
         )
 
+    remark_rows = []
+    if selected_class:
+        remark_lookup = {
+            item.student_id: item
+            for item in TeacherYearlyRemark.objects.filter(
+                teacher=teacher,
+                class_name=selected_class.class_name,
+                subject=selected_class.subject,
+                academic_year=selected_remark_year,
+            )
+        }
+        for student in students:
+            saved_remark = remark_lookup.get(student.id)
+            remark_rows.append(
+                {
+                    "student": student,
+                    "behavior_marks": saved_remark.behavior_marks if saved_remark else 0,
+                    "participation_marks": saved_remark.participation_marks if saved_remark else 0,
+                    "remarks": saved_remark.remarks if saved_remark else "",
+                    "updated_at": saved_remark.updated_at if saved_remark else None,
+                }
+            )
+
     selected_teacher_month = min(max(selected_teacher_month, 1), 12)
+    if selected_teacher_month == 1:
+        teacher_previous_year = selected_teacher_year - 1
+        teacher_previous_month = 12
+    else:
+        teacher_previous_year = selected_teacher_year
+        teacher_previous_month = selected_teacher_month - 1
+    if selected_teacher_month == 12:
+        teacher_next_year = selected_teacher_year + 1
+        teacher_next_month = 1
+    else:
+        teacher_next_year = selected_teacher_year
+        teacher_next_month = selected_teacher_month + 1
     teacher_month_total_days = calendar.monthrange(selected_teacher_year, selected_teacher_month)[1]
     teacher_attendance_records = TeacherAttendance.objects.filter(
         teacher=teacher,
@@ -1021,28 +1649,41 @@ def teacher_dashboard(request):
     teacher_attendance_lookup = {
         record.date.day: record for record in teacher_attendance_records
     }
+    school_timing_settings = SchoolTimingSettings.get_solo()
     teacher_attendance_rows = []
     teacher_present_count = 0
+    teacher_late_count = 0
+    teacher_leave_count = 0
     teacher_absent_count = 0
     for day_number in range(1, teacher_month_total_days + 1):
         current_date = date(selected_teacher_year, selected_teacher_month, day_number)
         record = teacher_attendance_lookup.get(day_number)
-        if record and record.status == AttendanceStatus.PRESENT:
+        entry_time = record.entry_time if record else None
+        exit_time = record.exit_time if record else None
+        day_status = _teacher_day_status(
+            entry_time,
+            exit_time,
+            school_timing_settings.late_after_time,
+            school_timing_settings.leave_before_time,
+            current_date,
+        )
+        if day_status == "present":
             teacher_present_count += 1
-        elif record and record.status == AttendanceStatus.ABSENT:
+        elif day_status == "late":
+            teacher_late_count += 1
+        elif day_status == "leave":
+            teacher_leave_count += 1
+        elif day_status == "absent":
             teacher_absent_count += 1
         teacher_attendance_rows.append(
             {
                 "date": current_date,
-                "status": record.status if record else None,
+                "status": day_status,
+                "entry_time": entry_time,
+                "exit_time": exit_time,
                 "remarks": record.remarks if record else "",
             }
         )
-    teacher_month_choices = [
-        (month_number, calendar.month_name[month_number])
-        for month_number in range(1, 13)
-    ]
-    teacher_year_choices = [today_local.year - 1, today_local.year, today_local.year + 1]
 
     return render(
         request,
@@ -1066,25 +1707,33 @@ def teacher_dashboard(request):
             "selected_exam": selected_exam,
             "student_exam_rows": student_exam_rows,
             "notifications": _attach_notification_state(
-                _notifications_for(NotificationAudience.TEACHERS),
+                _notifications_for(request.user),
                 request.user,
             ),
             "selected_teacher_year": selected_teacher_year,
             "selected_teacher_month": selected_teacher_month,
-            "teacher_month_choices": teacher_month_choices,
-            "teacher_year_choices": teacher_year_choices,
             "teacher_attendance_rows": teacher_attendance_rows,
             "teacher_attendance_summary": {
                 "present": teacher_present_count,
+                "late": teacher_late_count,
+                "leave": teacher_leave_count,
                 "absent": teacher_absent_count,
-                "marked_days": teacher_present_count + teacher_absent_count,
             },
+            "teacher_attendance_month_label": f"{calendar.month_name[selected_teacher_month]} {selected_teacher_year}",
+            "teacher_previous_month_url": f"{request.path}?panel=teacher_attendance&teacher_year={teacher_previous_year}&teacher_month={teacher_previous_month}",
+            "teacher_next_month_url": f"{request.path}?panel=teacher_attendance&teacher_year={teacher_next_year}&teacher_month={teacher_next_month}",
+            "school_timing_settings": school_timing_settings,
+            "selected_remark_year": selected_remark_year,
+            "remark_rows": remark_rows,
         },
     )
 
 
 @login_required
 def student_dashboard(request):
+    if _is_attendance_desk_user(request.user):
+        return redirect("attendance_desk")
+    school_timing_settings = SchoolTimingSettings.get_solo()
     panel = request.GET.get("panel", "dashboard")
     selected_diary_subject = request.GET.get("diary_subject")
     performance_view = request.GET.get("performance_view", "subject_wise")
@@ -1172,6 +1821,8 @@ def student_dashboard(request):
                 "selected_diary_subject": None,
                 "configured_subjects": [],
                 "performance_view": performance_view,
+                "school_timing_settings": school_timing_settings,
+                "yearly_teacher_remarks": [],
             },
         )
 
@@ -1190,6 +1841,13 @@ def student_dashboard(request):
     attendance_records = all_attendance_records[:10]
     exam_results = ExamResult.objects.filter(student=student).select_related("exam").order_by(
         "-exam__exam_date", "-exam__id"
+    )
+    yearly_teacher_remarks = TeacherYearlyRemark.objects.filter(
+        student=student
+    ).select_related("teacher__user").order_by(
+        "-academic_year",
+        "teacher__user__first_name",
+        "subject",
     )
     class_exam_averages = {
         item["exam_id"]: float(item["average_marks"])
@@ -1523,6 +2181,11 @@ def student_dashboard(request):
         },
     }
 
+    student_id_card = {
+        "card_number": _student_id_number(student),
+        "campus_info": ID_CARD_CAMPUS_INFO.get(student.campus, ID_CARD_CAMPUS_INFO[Campus.GIRLS]),
+    }
+
     if request.GET.get("download") == "progress_card":
         return _progress_card_pdf(
             student,
@@ -1533,6 +2196,8 @@ def student_dashboard(request):
             attendance_summary,
             configured_subjects,
         )
+    if request.GET.get("download") == "id_card":
+        return _id_card_pdf(student)
 
     weekdays = [
         Weekday.MONDAY,
@@ -1574,17 +2239,33 @@ def student_dashboard(request):
     )
     is_fee_alert = bool(
         current_month_fee
-        and current_month_fee.status != FeeStatus.PAID
+        and current_month_fee.balance_amount > 0
         and today.day > 6
     )
     total_paid = round(
-        sum(float(record.amount) for record in fee_records if record.status == FeeStatus.PAID),
+        sum(float(record.paid_amount) for record in fee_records),
         2,
     )
     total_unpaid = round(
-        sum(float(record.amount) for record in fee_records if record.status != FeeStatus.PAID),
+        sum(float(record.balance_amount) for record in fee_records),
         2,
     )
+
+    fee_summary = {
+        "total_paid": total_paid,
+        "total_unpaid": total_unpaid,
+        "current_month_status": current_month_fee.get_status_display()
+        if current_month_fee
+        else "Not available",
+        "current_month_name": _month_name(today.month),
+        "current_month_amount": current_month_fee.amount if current_month_fee else 0,
+        "current_month_paid": current_month_fee.paid_amount if current_month_fee else 0,
+        "current_month_balance": current_month_fee.balance_amount if current_month_fee else 0,
+        "is_fee_alert": is_fee_alert,
+    }
+
+    if request.GET.get("download") == "fee_tracker":
+        return _student_fee_tracker_pdf(student, fee_records, fee_summary)
 
     return render(
         request,
@@ -1606,20 +2287,15 @@ def student_dashboard(request):
             "latest_results": exam_results[:5],
             "timetable_rows": timetable_rows,
             "fee_records": fee_records,
-            "fee_summary": {
-                "total_paid": total_paid,
-                "total_unpaid": total_unpaid,
-                "current_month_status": current_month_fee.get_status_display()
-                if current_month_fee
-                else "Not available",
-                "current_month_name": _month_name(today.month),
-                "is_fee_alert": is_fee_alert,
-            },
+            "fee_summary": fee_summary,
             "notifications": _attach_notification_state(
-                _notifications_for(NotificationAudience.STUDENTS),
+                _notifications_for(request.user, student=student),
                 request.user,
             ),
+            "school_timing_settings": school_timing_settings,
             "progress_cards": progress_cards,
+            "student_id_card": student_id_card,
+            "yearly_teacher_remarks": yearly_teacher_remarks,
             "analytics": {
                 "exam_count": exam_count,
                 "total_obtained_marks": round(total_obtained_marks, 2),

@@ -3,7 +3,7 @@
 
 {% block extrastyle %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}">
+<link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}?v=20260504-3">
 {% endblock %}
 
 {% block content %}
@@ -11,34 +11,20 @@
     <div class="dms-teacher-attendance-head">
         <div>
             <p class="dms-admin-empty-tag">Teacher Attendance</p>
-            <h1>Mark teacher attendance by date.</h1>
-            <p>Select the month and day, then update attendance for every teacher from one page.</p>
+            <h1>Mark teacher entry and exit by date.</h1>
+            <p>Select the month and day, then use the row-wise entry and exit buttons to save each teacher's timing automatically.</p>
+            <p class="subtle">Current school timing: Start {{ school_timing_settings.school_start_time|time:"H:i" }}, End {{ school_timing_settings.school_end_time|time:"H:i" }}, Late after {{ school_timing_settings.late_after_time|time:"H:i" }}, Leave before {{ school_timing_settings.leave_before_time|time:"H:i" }}</p>
         </div>
-        <form method="get" class="dms-teacher-attendance-filters">
-            <label>
-                <span>Month</span>
-                <select name="month" onchange="this.form.submit()">
-                    {% for month_value, month_label in month_choices %}
-                        <option value="{{ month_value }}"{% if month_value == selected_month %} selected{% endif %}>{{ month_label }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>
-                <span>Day</span>
-                <select name="day" onchange="this.form.submit()">
-                    {% for day_value in day_choices %}
-                        <option value="{{ day_value }}"{% if day_value == selected_day %} selected{% endif %}>{{ day_value }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <input type="hidden" name="year" value="{{ selected_year }}">
-        </form>
     </div>
 
     <div class="dms-teacher-attendance-layout">
         <section class="dms-teacher-calendar-card">
             <div class="dms-teacher-calendar-head">
-                <h2>{{ month_name }} {{ selected_year }}</h2>
+                <div class="dms-teacher-calendar-title-row">
+                    <a href="{{ previous_month_url }}" class="dms-calendar-nav">&larr; Previous</a>
+                    <h2>{{ month_name }} {{ selected_year }}</h2>
+                    <a href="{{ next_month_url }}" class="dms-calendar-nav">Next &rarr;</a>
+                </div>
                 <p>Selected date: {{ selected_date|date:"d F Y" }}</p>
             </div>
             <div class="dms-teacher-calendar-grid">
@@ -58,49 +44,54 @@
         </section>
 
         <section class="dms-teacher-attendance-card">
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="year" value="{{ selected_year }}">
-                <input type="hidden" name="month" value="{{ selected_month }}">
-                <input type="hidden" name="day" value="{{ selected_day }}">
-
-                <div class="dms-teacher-table-wrap">
-                    <table class="dms-teacher-attendance-table">
-                        <thead>
+            <div class="dms-teacher-table-wrap">
+                <table class="dms-teacher-attendance-table">
+                    <thead>
+                        <tr>
+                            <th>Teacher</th>
+                            <th>Entry Time</th>
+                            <th>Enter</th>
+                            <th>Exit Time</th>
+                            <th>Exit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in teacher_rows %}
                             <tr>
-                                <th>Teacher</th>
-                                <th>Status</th>
-                                <th>Remarks</th>
+                                <td>{{ row.teacher_name }}</td>
+                                <td>{% if row.entry_time %}{{ row.entry_time }}{% else %}<span class="subtle">Not marked</span>{% endif %}</td>
+                                <td>
+                                    <form method="post" class="dms-inline-action-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="year" value="{{ selected_year }}">
+                                        <input type="hidden" name="month" value="{{ selected_month }}">
+                                        <input type="hidden" name="day" value="{{ selected_day }}">
+                                        <input type="hidden" name="teacher_id" value="{{ row.teacher.pk }}">
+                                        <input type="hidden" name="attendance_action" value="mark_entry">
+                                        <button type="submit" {% if not row.can_mark_entry %}disabled{% endif %}>Enter</button>
+                                    </form>
+                                </td>
+                                <td>{% if row.exit_time %}{{ row.exit_time }}{% else %}<span class="subtle">Not marked</span>{% endif %}</td>
+                                <td>
+                                    <form method="post" class="dms-inline-action-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="year" value="{{ selected_year }}">
+                                        <input type="hidden" name="month" value="{{ selected_month }}">
+                                        <input type="hidden" name="day" value="{{ selected_day }}">
+                                        <input type="hidden" name="teacher_id" value="{{ row.teacher.pk }}">
+                                        <input type="hidden" name="attendance_action" value="mark_exit">
+                                        <button type="submit" {% if not row.can_mark_exit %}disabled{% endif %}>Exit</button>
+                                    </form>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in teacher_rows %}
-                                <tr>
-                                    <td>{{ row.teacher_name }}</td>
-                                    <td>
-                                        <select name="status_{{ row.teacher.pk }}">
-                                            {% for value, label in status_choices %}
-                                                <option value="{{ value }}"{% if value == row.status %} selected{% endif %}>{{ label }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input type="text" name="remarks_{{ row.teacher.pk }}" value="{{ row.remarks }}" placeholder="Optional remarks">
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="3">No teachers are registered yet.</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="submit-row">
-                    <input type="submit" name="_save_attendance" value="Save Teacher Attendance" class="default">
-                </div>
-            </form>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5">No teachers are registered yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </section>
     </div>
 </div>

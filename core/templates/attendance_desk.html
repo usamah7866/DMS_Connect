@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Desk</title>
+    <style>
+        body { margin: 0; font-family: "Segoe UI", sans-serif; background: #f4f7fb; color: #1f2937; }
+        .page { max-width: 1280px; margin: 0 auto; padding: 28px; }
+        .hero, .panel, .message { background: white; border-radius: 16px; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
+        .hero { padding: 24px; margin-bottom: 20px; }
+        .hero h1 { margin: 0 0 8px; color: #16325c; }
+        .hero p { margin: 0; color: #64748b; line-height: 1.7; }
+        .message { padding: 14px 16px; margin-bottom: 14px; border-left: 5px solid #2563eb; }
+        .message.error { border-left-color: #dc2626; }
+        .layout { display: grid; grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); gap: 20px; }
+        .panel { padding: 24px; }
+        .calendar-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 16px; }
+        .calendar-head h2 { margin: 0; color: #16325c; }
+        .calendar-head a { text-decoration: none; padding: 10px 14px; border-radius: 999px; background: #eef2ff; color: #1e3c72; font-weight: 600; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+        .weekday { text-align: center; font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; }
+        .calendar-cell { min-height: 42px; display: grid; place-items: center; border-radius: 12px; background: #f8fbff; color: #16325c; text-decoration: none; font-weight: 700; }
+        .calendar-cell.selected { background: linear-gradient(180deg, #16325c, #1e3c72); color: white; }
+        .calendar-cell.blank { background: transparent; }
+        .timing-note { margin-top: 16px; color: #64748b; line-height: 1.7; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: middle; }
+        th { color: #16325c; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
+        .subtle { color: #64748b; }
+        .action-form { margin: 0; }
+        button { min-height: 44px; min-width: 104px; padding: 10px 16px; border-radius: 10px; border: none; background: #1e3c72; color: white; cursor: pointer; font-weight: 600; }
+        button:hover { background: #16325c; }
+        button[disabled] { opacity: 0.45; cursor: not-allowed; }
+        .logout { display: inline-block; margin-top: 18px; color: #16325c; text-decoration: none; font-weight: 600; }
+        @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } .page { padding: 18px; } }
+    </style>
+</head>
+<body>
+    <div class="page">
+        {% for message in messages %}
+            <div class="message {% if message.tags == 'error' %}error{% endif %}">{{ message }}</div>
+        {% endfor %}
+
+        <section class="hero">
+            <h1>Attendance Desk</h1>
+            <p>Use this reception page to mark teacher entry and exit timing safely. This account can only access attendance marking and nothing else.</p>
+            <a class="logout" href="{% url 'logout' %}">Logout</a>
+        </section>
+
+        <div class="layout">
+            <section class="panel">
+                <div class="calendar-head">
+                    <a href="{{ previous_month_url }}">&larr; Previous</a>
+                    <h2>{{ month_name }} {{ selected_date.year }}</h2>
+                    <a href="{{ next_month_url }}">Next &rarr;</a>
+                </div>
+                <div class="subtle" style="margin-bottom:14px;">Selected date: {{ selected_date|date:"d F Y" }}</div>
+                <div class="calendar-grid">
+                    {% for weekday in weekday_labels %}
+                        <div class="weekday">{{ weekday }}</div>
+                    {% endfor %}
+                    {% for week in calendar_weeks %}
+                        {% for day in week %}
+                            {% if day.is_blank %}
+                                <div class="calendar-cell blank"></div>
+                            {% else %}
+                                <a href="{{ day.url }}" class="calendar-cell {% if day.is_selected %}selected{% endif %}">{{ day.number }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                <div class="timing-note">
+                    Current school timing:
+                    Start {{ school_timing_settings.school_start_time|time:"H:i" }},
+                    End {{ school_timing_settings.school_end_time|time:"H:i" }},
+                    Late after {{ school_timing_settings.late_after_time|time:"H:i" }},
+                    Leave before {{ school_timing_settings.leave_before_time|time:"H:i" }}.
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Teacher</th>
+                                <th>Entry Time</th>
+                                <th>Enter</th>
+                                <th>Exit Time</th>
+                                <th>Exit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in teacher_rows %}
+                                <tr>
+                                    <td>{{ row.teacher_name }}</td>
+                                    <td>{% if row.entry_time %}{{ row.entry_time }}{% else %}<span class="subtle">Not marked</span>{% endif %}</td>
+                                    <td>
+                                        <form method="post" class="action-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="year" value="{{ selected_date.year }}">
+                                            <input type="hidden" name="month" value="{{ selected_date.month }}">
+                                            <input type="hidden" name="day" value="{{ selected_date.day }}">
+                                            <input type="hidden" name="teacher_id" value="{{ row.teacher.pk }}">
+                                            <input type="hidden" name="attendance_action" value="mark_entry">
+                                            <button type="submit" {% if not row.can_mark_entry %}disabled{% endif %}>Enter</button>
+                                        </form>
+                                    </td>
+                                    <td>{% if row.exit_time %}{{ row.exit_time }}{% else %}<span class="subtle">Not marked</span>{% endif %}</td>
+                                    <td>
+                                        <form method="post" class="action-form">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="year" value="{{ selected_date.year }}">
+                                            <input type="hidden" name="month" value="{{ selected_date.month }}">
+                                            <input type="hidden" name="day" value="{{ selected_date.day }}">
+                                            <input type="hidden" name="teacher_id" value="{{ row.teacher.pk }}">
+                                            <input type="hidden" name="attendance_action" value="mark_exit">
+                                            <button type="submit" {% if not row.can_mark_exit %}disabled{% endif %}>Exit</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5">No teachers are registered yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -55,7 +56,10 @@
         .download-link { display: inline-block; text-decoration: none; color: white; background: #16325c; padding: 10px 16px; border-radius: 10px; font-weight: 600; }
         .fee-note { padding: 14px 16px; border-radius: 14px; background: #eff6ff; color: #16325c; font-weight: 600; margin-bottom: 18px; }
         .fee-note.alert { background: #fee2e2; color: #991b1b; }
+        .timing-strip { margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: #eff6ff; color: #16325c; }
+        .timing-strip strong { display: block; margin-bottom: 6px; font-size: 14px; }
         .fee-status-paid { color: #166534; font-weight: 700; }
+        .fee-status-partial { color: #b45309; font-weight: 700; }
         .fee-status-unpaid { color: #b91c1c; font-weight: 700; }
         .graph-card { padding: 20px; }
         .graph-row { margin-bottom: 16px; }
@@ -66,7 +70,86 @@
         .positive-diff { color: #166534; font-weight: 700; }
         .negative-diff { color: #b91c1c; font-weight: 700; }
         .subject-summary { cursor: pointer; font-weight: 700; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-        @media (max-width: 900px) { .layout { flex-direction: column; } .sidebar { width: 100%; } .content { padding: 18px; } }
+        .id-card-section { max-width: 620px; }
+        .id-card-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+        .id-card-toggle { display: inline-flex; gap: 8px; background: #e8eef9; padding: 6px; border-radius: 999px; }
+        .id-card-toggle-button { padding: 10px 18px; border-radius: 999px; font-weight: 700; color: #16325c; cursor: pointer; background: transparent; border: none; }
+        .id-card-toggle-button.active { background: #16325c; color: white; box-shadow: 0 10px 24px rgba(22,50,92,0.22); }
+        .id-card-stage { position: relative; display: flex; min-height: 520px; }
+        .id-card-face { display: none; width: 100%; }
+        .id-card-face.is-active { display: block; }
+        .id-card-layout { display: block; }
+        .id-card-shell { position: relative; width: min(100%, 290px); height: 452px; max-width: 290px; background: white; border-radius: 18px; overflow: hidden; box-shadow: 0 16px 32px rgba(15,23,42,0.12); border: 1px solid #d7e3f4; }
+        .id-card-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 0; }
+        .id-card-overlay { position: relative; z-index: 1; width: 100%; height: 100%; }
+        .id-card-shell.front::before, .id-card-shell.back::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(247,250,255,0.98)); z-index: 0; }
+        .id-card-shell.front::after { content: ""; position: absolute; top: 0; right: 0; width: 48%; height: 42%; background: linear-gradient(135deg, #ef0f12 0%, #ef0f12 70%, transparent 70%); z-index: 0; }
+        .id-card-shell.back::after { content: ""; position: absolute; right: 0; bottom: 0; width: 42%; height: 40%; background: linear-gradient(315deg, #ef0f12 0%, #ef0f12 70%, transparent 70%); z-index: 0; }
+        .id-card-inner { position: relative; z-index: 1; height: 100%; padding: 30px 30px 26px; box-sizing: border-box; }
+        .id-card-corner { position: absolute; background: #083b5a; z-index: 0; }
+        .id-card-corner.front-top { left: 0; top: 0; width: 38%; height: 42%; clip-path: polygon(0 0, 100% 0, 0 100%); }
+        .id-card-corner.back-bottom { left: 0; bottom: 0; width: 42%; height: 42%; clip-path: polygon(0 100%, 100% 100%, 0 0); }
+        .id-card-accent { position: absolute; width: 58%; height: 10px; background: #dff0fb; transform: rotate(-45deg); z-index: 0; }
+        .id-card-accent.white { background: white; height: 6px; }
+        .id-card-accent.dark { background: #083b5a; height: 4px; }
+        .front .accent-one { top: 160px; right: -110px; }
+        .front .accent-two { top: 172px; right: -112px; }
+        .front .accent-three { top: 182px; right: -112px; }
+        .back .accent-one { bottom: 164px; right: -116px; }
+        .back .accent-two { bottom: 176px; right: -118px; }
+        .back .accent-three { bottom: 186px; right: -118px; }
+        .id-brand { display: flex; align-items: center; gap: 12px; }
+        .id-brand img { width: 58px; height: 58px; object-fit: contain; }
+        .id-brand-text { font-weight: 800; color: #ef0f12; font-size: 18px; line-height: 1.2; }
+        .id-front-top { display: grid; grid-template-columns: 130px 1fr; align-items: start; gap: 28px; }
+        .id-photo-frame { width: 130px; height: 130px; background: white; border: 10px solid white; box-shadow: 0 16px 28px rgba(15,23,42,0.14); transform: rotate(-45deg); margin: 32px 0 0 12px; overflow: hidden; }
+        .id-photo-frame img, .id-photo-placeholder { width: 100%; height: 100%; transform: rotate(45deg) scale(1.16); transform-origin: center; object-fit: cover; }
+        .id-photo-placeholder { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #e5e7eb, #f8fafc); color: #64748b; font-weight: 700; letter-spacing: 1px; }
+        .id-front-details { margin-top: 34px; padding-left: 4px; }
+        .id-student-name { font-size: 42px; line-height: 1.1; margin: 0 0 12px; color: #083b5a; font-weight: 400; }
+        .id-student-subtitle { font-size: 18px; margin-bottom: 28px; color: #083b5a; }
+        .id-info-grid { display: grid; grid-template-columns: 130px 16px 1fr; gap: 10px 12px; font-size: 18px; color: #083b5a; align-items: start; }
+        .id-info-label { font-weight: 500; }
+        .id-barcode { margin-top: 26px; height: 74px; width: 74%; background: repeating-linear-gradient(90deg, #111827 0 4px, transparent 4px 8px, #374151 8px 10px, transparent 10px 14px); border-radius: 4px; }
+        .id-barcode-text { margin-top: 10px; color: #64748b; letter-spacing: 2px; font-size: 13px; }
+        .id-back-copy { text-align: center; margin: 16px auto 40px; max-width: 78%; color: #4b5563; font-size: 18px; line-height: 1.45; }
+        .id-back-contact { margin: 0 0 0 48%; color: #083b5a; font-size: 20px; }
+        .id-back-contact-row { display: grid; grid-template-columns: 120px 18px 1fr; gap: 8px; margin-bottom: 10px; }
+        .id-back-qr { width: 120px; height: 120px; margin: 38px auto 26px; border: 5px solid #111827; background: repeating-linear-gradient(0deg, #000 0 10px, #fff 10px 20px), repeating-linear-gradient(90deg, rgba(0,0,0,0.4) 0 10px, transparent 10px 20px); background-blend-mode: multiply; }
+        .id-card-download { margin-bottom: 18px; }
+        .id-card-note { margin-top: 18px; color: #64748b; font-size: 14px; }
+        .id-card-stage .id-card-shell.front::before,
+        .id-card-stage .id-card-shell.front::after,
+        .id-card-stage .id-card-shell.back::before,
+        .id-card-stage .id-card-shell.back::after,
+        .id-card-stage .id-card-corner,
+        .id-card-stage .id-card-accent,
+        .id-card-stage .id-brand,
+        .id-card-stage .id-brand-text,
+        .id-card-stage .id-back-qr { display: none; }
+        .front-face .id-card-inner,
+        .back-face .id-card-inner { padding: 0; }
+        .front-face .id-front-top { display: block; position: relative; min-height: 100%; }
+        .front-face .id-photo-frame { position: absolute; left: 91px; top: 95px; width: 120px; height: 125px; margin: 0; padding: 10px; box-sizing: border-box; border: none; box-shadow: none; transform: none; background: transparent; }
+        .front-face .id-photo-frame img, .front-face .id-photo-placeholder { width: 100%; height: 100%; transform: none; object-fit: cover;  object-position: center 20%; border-radius: 2px; display: block; }
+        .front-face .id-front-details { position: absolute; left: 22px; right: 15px; top: 240px; margin: 0; padding: 0; }
+        .front-face .id-student-name { text-align: center; font-size: 18px; margin: 0 0 6px; color: #07374f; line-height: 1.12; }
+        .front-face .id-student-subtitle { text-align: center; font-size: 11px; margin-bottom: 10px; color: #07374f; }
+        .front-face .id-info-grid { grid-template-columns: 58px 9px 1fr; gap: 4px 6px; font-size: 9.5px; max-width: 220px; margin: 0 auto; color: #07374f; }
+        .back-face .id-card-inner { position: relative; min-height: 100%; }
+        .back-face .id-back-copy,
+        .back-face .id-back-contact { display: none; }
+        @media (max-width: 900px) {
+            .layout { flex-direction: column; }
+            .sidebar { width: 100%; }
+            .content { padding: 18px; }
+            .id-card-toolbar { align-items: stretch; }
+            .id-card-shell { width: 100%; }
+            .front-face .id-photo-frame { left: 50%; transform: translateX(-50%); top: 108px; width: 120px; height: 120px; }
+            .front-face .id-front-details { left: 16px; right: 16px; top: 266px; }
+            .id-student-name { font-size: 17px; }
+            .front-face .id-info-grid { font-size: 9px; }
+        }
     </style>
 </head>
 <body>
@@ -82,6 +165,7 @@
                 <a class="nav-link {% if panel == 'exam_results' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=exam_results">Academic Performance</a>
                 <a class="nav-link {% if panel == 'digital_diary' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=digital_diary">Digital Diary</a>
                 <a class="nav-link {% if panel == 'timetable' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=timetable">Timetable</a>
+                <a class="nav-link {% if panel == 'id_card' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=id_card">ID Card</a>
                 <a class="nav-link {% if fee_summary.is_fee_alert %}alert{% endif %} {% if panel == 'fee' %}active{% endif %}" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=fee">Fee {% if fee_summary.is_fee_alert %}<span class="nav-badge">1</span>{% endif %}</a>
             </div>
         {% endif %}
@@ -138,6 +222,13 @@
                     <h1 style="margin:0 0 8px;">{{ student.name }}</h1>
                     <div class="subtle">Class: {{ student.class_name }}</div>
                     <div class="subtle">Roll Number: {{ student.roll_number }}</div>
+                    <div class="timing-strip">
+                        <strong>Current School Timing</strong>
+                        Start {{ school_timing_settings.school_start_time|time:"H:i" }},
+                        End {{ school_timing_settings.school_end_time|time:"H:i" }},
+                        Late after {{ school_timing_settings.late_after_time|time:"H:i" }},
+                        Leave before {{ school_timing_settings.leave_before_time|time:"H:i" }}
+                    </div>
                 </div>
             {% else %}
                 <div>
@@ -314,6 +405,29 @@
                         <p>No subject comparison is available yet.</p>
                     {% endif %}
                 </div>
+
+                <div class="panel">
+                    <h2 style="margin-top:0;">Yearly Teacher Remarks</h2>
+                    {% if yearly_teacher_remarks %}
+                        <table>
+                            <thead><tr><th>Teacher</th><th>Subject</th><th>Year</th><th>Behavior</th><th>Participation</th><th>Remarks</th></tr></thead>
+                            <tbody>
+                                {% for item in yearly_teacher_remarks %}
+                                    <tr>
+                                        <td>{{ item.teacher.user.get_full_name|default:item.teacher.user.username }}</td>
+                                        <td>{{ item.subject }}</td>
+                                        <td>{{ item.academic_year }}</td>
+                                        <td>{{ item.behavior_marks }}/10</td>
+                                        <td>{{ item.participation_marks }}/10</td>
+                                        <td>{% if item.remarks %}{{ item.remarks }}{% else %}<span class="subtle">-</span>{% endif %}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No yearly teacher remarks have been added yet.</p>
+                    {% endif %}
+                </div>
             {% elif panel == 'attendance' %}
                 <div class="panel">
                     <h2 style="margin-top:0;">Attendance</h2>
@@ -468,6 +582,27 @@
                     {% else %}
                         <p>No academic results available yet.</p>
                     {% endif %}
+
+                    <h3 style="margin-top:24px;">Yearly Teacher Remarks</h3>
+                    {% if yearly_teacher_remarks %}
+                        <table>
+                            <thead><tr><th>Teacher</th><th>Subject</th><th>Year</th><th>Behavior</th><th>Participation</th><th>Remarks</th></tr></thead>
+                            <tbody>
+                                {% for item in yearly_teacher_remarks %}
+                                    <tr>
+                                        <td>{{ item.teacher.user.get_full_name|default:item.teacher.user.username }}</td>
+                                        <td>{{ item.subject }}</td>
+                                        <td>{{ item.academic_year }}</td>
+                                        <td>{{ item.behavior_marks }}/10</td>
+                                        <td>{{ item.participation_marks }}/10</td>
+                                        <td>{% if item.remarks %}{{ item.remarks }}{% else %}<span class="subtle">-</span>{% endif %}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No yearly teacher remarks have been added yet.</p>
+                    {% endif %}
                 </div>
             {% elif panel == 'digital_diary' %}
                 <div class="panel">
@@ -550,9 +685,75 @@
                         </tbody>
                     </table>
                 </div>
+            {% elif panel == 'id_card' %}
+                <div class="panel">
+                    <h2 style="margin-top:0;">Student ID Card</h2>
+                    <div class="id-card-section">
+                        <div class="id-card-toolbar">
+                            <div class="id-card-toggle">
+                                <button type="button" class="id-card-toggle-button active" data-id-card-target="front">Front Side</button>
+                                <button type="button" class="id-card-toggle-button" data-id-card-target="back">Back Side</button>
+                            </div>
+                            <div class="id-card-download">
+                                <a class="download-link" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=id_card&download=id_card">Download ID Card PDF</a>
+                            </div>
+                        </div>
+                        <div class="id-card-stage">
+                        <div class="id-card-face front-face is-active" data-id-card-face="front">
+                        <div class="id-card-layout">
+                        <div class="id-card-shell front">
+                            <img class="id-card-bg" src="{% static 'core/images/student-id-front.png' %}" alt="Student ID card front">
+                            <div class="id-card-overlay">
+                            <div class="id-card-inner">
+                                <div class="id-front-top">
+                                    <div>
+                                        <div class="id-photo-frame">
+                                            {% if student.student_photo %}
+                                                <img src="{{ student.student_photo.url }}" alt="{{ student.name }}">
+                                            {% else %}
+                                                <div class="id-photo-placeholder">PHOTO</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="id-front-details">
+                                        <h3 class="id-student-name">{{ student.name }}</h3>
+                                        <div class="id-student-subtitle">Class {{ student.class_name }}</div>
+                                        <div class="id-info-grid">
+                                            <div class="id-info-label">Roll No</div><div>:</div><div>{{ student.roll_number }}</div>
+                                            <div class="id-info-label">Campus</div><div>:</div><div>{{ student.campus }}</div>
+                                            <div class="id-info-label">Father</div><div>:</div><div>{{ student.father_name }}</div>
+                                            <div class="id-info-label">DOB</div><div>:</div><div>{{ student.date_of_birth|date:"d/m/Y" }}</div>
+                                            <div class="id-info-label">Valid till</div><div>:</div><div>{{ student.id_card_valid_until|date:"d/m/Y" }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                        </div>
+                        <div class="id-card-face back-face" data-id-card-face="back">
+                        <div class="id-card-layout">
+                        <div class="id-card-shell back">
+                            <img class="id-card-bg" src="{% static 'core/images/student-id-back.png' %}" alt="Student ID card back">
+                            <div class="id-card-overlay">
+                                <div class="id-card-inner"></div>
+                            </div>
+                        </div>
+                        </div>
+                        </div>
+                        </div>
+                    </div>
+                    <div class="id-card-note">
+                        The downloadable PDF contains both the front and the back of the student ID card in one file.
+                    </div>
+                </div>
             {% elif panel == 'fee' %}
                 <div class="panel">
                     <h2 style="margin-top:0;">Fee</h2>
+                    <div style="margin-bottom:18px;">
+                        <a class="download-link" href="{% url 'student_dashboard' %}?student_id={{ student.id }}&panel=fee&download=fee_tracker">Download Fee Tracking PDF</a>
+                    </div>
                     <div class="fee-note {% if fee_summary.is_fee_alert %}alert{% endif %}">
                         Submit fee before 7th of every month.
                         {% if fee_summary.is_fee_alert %}
@@ -562,16 +763,21 @@
 
                     <div class="summary">
                         <div class="card"><div class="label">Current Month</div><div class="value" style="font-size:22px;">{{ fee_summary.current_month_status }}</div></div>
+                        <div class="card"><div class="label">Monthly Fee</div><div class="value" style="font-size:22px;">{{ fee_summary.current_month_amount }}</div></div>
+                        <div class="card"><div class="label">Paid This Month</div><div class="value" style="font-size:22px;">{{ fee_summary.current_month_paid }}</div></div>
+                        <div class="card"><div class="label">Balance</div><div class="value" style="font-size:22px;">{{ fee_summary.current_month_balance }}</div></div>
                     </div>
 
                     {% if fee_records %}
                         <table>
-                            <thead><tr><th>Month</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Paid Date</th><th>Receipt No.</th><th>Remarks</th></tr></thead>
+                            <thead><tr><th>Month</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Due Date</th><th>Status</th><th>Paid Date</th><th>Receipt No.</th><th>Remarks</th></tr></thead>
                             <tbody>
                                 {% for fee in fee_records %}
                                     <tr>
                                         <td>{{ fee.month_name }} {{ fee.year }}</td>
                                         <td>{{ fee.amount }}</td>
+                                        <td>{{ fee.paid_amount }}</td>
+                                        <td>{{ fee.balance_amount }}</td>
                                         <td>{{ fee.due_date }}</td>
                                         <td class="fee-status-{{ fee.status }}">{{ fee.get_status_display }}</td>
                                         <td>{{ fee.paid_date|default:"-" }}</td>
@@ -589,5 +795,24 @@
         {% endif %}
     </main>
 </div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const buttons = document.querySelectorAll("[data-id-card-target]");
+    const faces = document.querySelectorAll("[data-id-card-face]");
+    if (!buttons.length || !faces.length) return;
+
+    buttons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            const target = button.getAttribute("data-id-card-target");
+            buttons.forEach(function (item) {
+                item.classList.toggle("active", item === button);
+            });
+            faces.forEach(function (face) {
+                face.classList.toggle("is-active", face.getAttribute("data-id-card-face") === target);
+            });
+        });
+    });
+});
+</script>
 </body>
 </html>

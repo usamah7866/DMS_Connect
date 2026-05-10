@@ -3,15 +3,79 @@
 
 {% block extrastyle %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}">
+<link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}?v=20260504-3">
 {% endblock %}
 
 {% block content %}
-<div class="dms-admin-empty-state">
-    <div>
-        <p class="dms-admin-empty-tag">Dashboard</p>
-        <h1>Admin dashboard is ready for your final layout.</h1>
-        <p>For now, the dashboard stays empty and the side menu is your main navigation for each separate admin page.</p>
+<section class="dms-dashboard-widget-card">
+    <div class="dms-dashboard-widget-head">
+        <div>
+            <p class="dms-admin-empty-tag">Dashboard</p>
+            <h1>Admin Dashboard Widgets</h1>
+            <p>A quick school snapshot for the most important live counts.</p>
+        </div>
     </div>
-</div>
+    <div class="dms-dashboard-widget-grid">
+        <div class="dms-dashboard-widget">
+            <span>Total Students</span>
+            <strong>{{ dashboard_widgets.student_count }}</strong>
+        </div>
+        <div class="dms-dashboard-widget">
+            <span>Total Teachers</span>
+            <strong>{{ dashboard_widgets.teacher_count }}</strong>
+        </div>
+        <div class="dms-dashboard-widget">
+            <span>Today's Teacher Attendance</span>
+            <strong>{{ dashboard_widgets.todays_teacher_attendance }}</strong>
+        </div>
+        <div class="dms-dashboard-widget">
+            <span>Unpaid Fees This Month</span>
+            <strong>{{ dashboard_widgets.unpaid_fees_this_month }}</strong>
+        </div>
+        <div class="dms-dashboard-widget">
+            <span>Unread Notifications</span>
+            <strong>{{ dashboard_widgets.unread_notifications }}</strong>
+        </div>
+    </div>
+</section>
+
+<section class="dms-dashboard-settings-card">
+    <div class="dms-dashboard-settings-head">
+        <div>
+            <p class="dms-admin-empty-tag">School Timing</p>
+            <h2>Update current school time settings.</h2>
+            <p>Use this dashboard section whenever summer or winter timings change. Teacher attendance status will follow these saved backend timings.</p>
+        </div>
+    </div>
+
+    <form method="post" action="{{ school_timing_save_url }}" class="dms-dashboard-settings-form">
+        {% csrf_token %}
+        <div class="dms-dashboard-settings-grid">
+            <div class="dms-dashboard-settings-field">
+                <label for="{{ school_timing_form.title.id_for_label }}">Title</label>
+                {{ school_timing_form.title }}
+            </div>
+            <div class="dms-dashboard-settings-field">
+                <label for="{{ school_timing_form.school_start_time.id_for_label }}">School Start Time</label>
+                {{ school_timing_form.school_start_time }}
+            </div>
+            <div class="dms-dashboard-settings-field">
+                <label for="{{ school_timing_form.school_end_time.id_for_label }}">School End Time</label>
+                {{ school_timing_form.school_end_time }}
+            </div>
+            <div class="dms-dashboard-settings-field">
+                <label for="{{ school_timing_form.late_after_time.id_for_label }}">Late After</label>
+                {{ school_timing_form.late_after_time }}
+            </div>
+            <div class="dms-dashboard-settings-field">
+                <label for="{{ school_timing_form.leave_before_time.id_for_label }}">Leave Before</label>
+                {{ school_timing_form.leave_before_time }}
+            </div>
+        </div>
+        <div class="dms-dashboard-settings-actions">
+            <button type="submit" class="button default">Save School Timing</button>
+            <a href="{{ staff_attendance_records_url }}" class="button">View Staff Records</a>
+        </div>
+    </form>
+</section>
 {% endblock %}

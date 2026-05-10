@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, time
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -8,6 +9,12 @@ class AttendanceStatus(models.TextChoices):
     PRESENT = "present", "Present"
     ABSENT = "absent", "Absent"
     LATE = "late", "Late"
+
+
+class TeacherAttendanceStatus(models.TextChoices):
+    PRESENT = "present", "Present"
+    ABSENT = "absent", "Absent"
+    LEAVE = "leave", "Leave"
 
 
 class DiaryStatus(models.TextChoices):
@@ -26,13 +33,15 @@ class Weekday(models.TextChoices):
 
 
 class NotificationAudience(models.TextChoices):
+    ALL = "all", "All"
     STUDENTS = "students", "Students"
-    TEACHERS = "teachers", "Teachers"
-    BOTH = "both", "Both"
+    STAFF = "staff", "Staff"
+    CLASS_WISE = "classwise", "Class Wise"
 
 
 class FeeStatus(models.TextChoices):
     UNPAID = "unpaid", "Unpaid"
+    PARTIAL = "partial", "Partial"
     PAID = "paid", "Paid"
 
 
@@ -40,6 +49,33 @@ class Campus(models.TextChoices):
     GIRLS = "Girls Campus", "Girls Campus"
     KIDS = "Kids Campus", "Kids Campus"
     RUSTAM = "Rustam Park Campus", "Rustam Park Campus"
+
+
+class SchoolTimingSettings(models.Model):
+    title = models.CharField(max_length=80, default="Current School Timing")
+    school_start_time = models.TimeField(default=time(7, 0))
+    school_end_time = models.TimeField(default=time(13, 30))
+    late_after_time = models.TimeField(default=time(7, 15))
+    leave_before_time = models.TimeField(default=time(13, 0))
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "School Timing"
+        verbose_name_plural = "School Timings"
+
+    def __str__(self):
+        return self.title
+
+    @classmethod
+    def get_solo(cls):
+        defaults = {
+            "title": "Current School Timing",
+            "school_start_time": time(7, 0),
+            "school_end_time": time(13, 30),
+            "late_after_time": time(7, 15),
+            "leave_before_time": time(13, 0),
+        }
+        return cls.objects.get_or_create(pk=1, defaults=defaults)[0]
 
 
 class SchoolClass(models.Model):
@@ -85,12 +121,27 @@ class SchoolClassSubject(models.Model):
         return f"{self.school_class.name} - {self.subject.name}"
 
 
+def student_id_photo_upload_path(instance, filename):
+    safe_roll = str(instance.roll_number or "no-roll")
+    safe_name = (instance.name or instance.user_account.username).lower().replace(" ", "-")
+    return f"student-id-cards/{instance.class_name}/{safe_roll}-{safe_name}/{filename}"
+
+
 # Student Model
 class Student(models.Model):
     name = models.CharField(max_length=100)
+    father_name = models.CharField(max_length=100, blank=True)
     class_name = models.CharField(max_length=20)
     roll_number = models.IntegerField()
     monthly_fee = models.DecimalField(max_digits=10, decimal_places=2)
+    campus = models.CharField(max_length=30, choices=Campus.choices, default=Campus.GIRLS)
+    date_of_birth = models.DateField(null=True, blank=True)
+    id_card_valid_until = models.DateField(null=True, blank=True)
+    student_photo = models.FileField(
+        upload_to=student_id_photo_upload_path,
+        null=True,
+        blank=True,
+    )
     user_account = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
@@ -137,12 +188,11 @@ class TeacherAttendance(models.Model):
     date = models.DateField(default=timezone.localdate)
     status = models.CharField(
         max_length=10,
-        choices=[
-            (AttendanceStatus.PRESENT, "Present"),
-            (AttendanceStatus.ABSENT, "Absent"),
-        ],
-        default=AttendanceStatus.PRESENT,
+        choices=TeacherAttendanceStatus.choices,
+        default=TeacherAttendanceStatus.PRESENT,
     )
+    entry_time = models.TimeField(blank=True, null=True)
+    exit_time = models.TimeField(blank=True, null=True)
     remarks = models.CharField(max_length=200, blank=True)
 
     class Meta:
@@ -156,6 +206,37 @@ class TeacherAttendance(models.Model):
 
     def __str__(self):
         return f"{self.teacher.user.get_full_name() or self.teacher.user.username} - {self.date}"
+
+
+class TeacherYearlyRemark(models.Model):
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name="yearly_remarks")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="yearly_remarks")
+    class_name = models.CharField(max_length=20)
+    subject = models.CharField(max_length=50)
+    academic_year = models.PositiveIntegerField(default=timezone.localdate().year)
+    behavior_marks = models.PositiveSmallIntegerField(default=0)
+    participation_marks = models.PositiveSmallIntegerField(default=0)
+    remarks = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = [
+            "-academic_year",
+            "student__roll_number",
+            "student__name",
+            "subject",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["teacher", "student", "class_name", "subject", "academic_year"],
+                name="unique_teacher_yearly_remark_per_student_subject_year",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.student.name} - {self.subject} - {self.academic_year}"
+        )
 
 class ClassSubject(models.Model):
     teacher = models.ForeignKey('Teacher', on_delete=models.CASCADE)
@@ -226,9 +307,14 @@ class Notification(models.Model):
     title = models.CharField(max_length=150)
     message = models.TextField()
     audience = models.CharField(
-        max_length=10,
+        max_length=12,
         choices=NotificationAudience.choices,
-        default=NotificationAudience.BOTH,
+        default=NotificationAudience.ALL,
+    )
+    target_classes = models.ManyToManyField(
+        SchoolClass,
+        blank=True,
+        related_name="notifications",
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -265,6 +351,7 @@ class StudentFee(models.Model):
     year = models.PositiveIntegerField()
     month = models.PositiveSmallIntegerField()
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     due_date = models.DateField()
     status = models.CharField(
         max_length=10,
@@ -286,6 +373,27 @@ class StudentFee(models.Model):
 
     def __str__(self):
         return f"{self.student.name} - {self.month}/{self.year}"
+
+    @property
+    def balance_amount(self):
+        return max(Decimal("0.00"), self.amount - self.paid_amount)
+
+    def save(self, *args, **kwargs):
+        self.amount = self.amount or Decimal("0.00")
+        self.paid_amount = self.paid_amount or Decimal("0.00")
+        if self.paid_amount < 0:
+            self.paid_amount = Decimal("0.00")
+        if self.paid_amount > self.amount:
+            self.paid_amount = self.amount
+
+        if self.paid_amount <= 0:
+            self.status = FeeStatus.UNPAID
+        elif self.paid_amount < self.amount:
+            self.status = FeeStatus.PARTIAL
+        else:
+            self.status = FeeStatus.PAID
+
+        super().save(*args, **kwargs)
 
 
 class Attendance(models.Model):
